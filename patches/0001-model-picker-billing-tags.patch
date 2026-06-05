@@ -1,0 +1,266 @@
+diff --git a/gateway/platforms/telegram.py b/gateway/platforms/telegram.py
+index fa55f2db0..5bbf691f1 100644
+--- a/gateway/platforms/telegram.py
++++ b/gateway/platforms/telegram.py
+@@ -2971,8 +2971,13 @@ class TelegramAdapter(BasePlatformAdapter):
+         rows.append([InlineKeyboardButton("✗ Cancel", callback_data="mx")])
+         return InlineKeyboardMarkup(rows)
+ 
+-    def _build_model_keyboard(self, models: list, page: int) -> tuple:
+-        """Build paginated model buttons. Returns (keyboard, page_info_text)."""
++    def _build_model_keyboard(self, models: list, page: int, billing_tag: str = "") -> tuple:
++        """Build paginated model buttons. Returns (keyboard, page_info_text).
++
++        ``billing_tag`` (e.g. "pay"/"sub") is appended to every button so the
++        billing model stays visible at the model-selection level, not just in
++        the provider header.
++        """
+         page_size = self._MODEL_PAGE_SIZE
+         total = len(models)
+         total_pages = max(1, (total + page_size - 1) // page_size)
+@@ -2982,14 +2987,17 @@ class TelegramAdapter(BasePlatformAdapter):
+         end = min(start + page_size, total)
+         page_models = models[start:end]
+ 
++        suffix = f" [{billing_tag}]" if billing_tag else ""
++        max_short = 38 - len(suffix)
++
+         buttons: list = []
+         for i, model_id in enumerate(page_models):
+             abs_idx = start + i
+             short = model_id.split("/")[-1] if "/" in model_id else model_id
+-            if len(short) > 38:
+-                short = short[:35] + "..."
++            if len(short) > max_short:
++                short = short[: max_short - 3] + "..."
+             buttons.append(
+-                InlineKeyboardButton(short, callback_data=f"mm:{abs_idx}")
++                InlineKeyboardButton(f"{short}{suffix}", callback_data=f"mm:{abs_idx}")
+             )
+ 
+         rows = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+@@ -3044,7 +3052,14 @@ class TelegramAdapter(BasePlatformAdapter):
+             state["model_list"] = models
+             state["model_page"] = 0
+ 
+-            keyboard, page_info = self._build_model_keyboard(models, 0)
++            try:
++                from hermes_cli.models import provider_billing_tag
++                billing_tag = provider_billing_tag(provider_slug)
++            except Exception:
++                billing_tag = ""
++            state["billing_tag"] = billing_tag
++
++            keyboard, page_info = self._build_model_keyboard(models, 0, billing_tag)
+ 
+             pname = provider.get("name", provider_slug)
+             total = provider.get("total_models", len(models))
+@@ -3075,7 +3090,9 @@ class TelegramAdapter(BasePlatformAdapter):
+             models = state.get("model_list", [])
+             state["model_page"] = page
+ 
+-            keyboard, page_info = self._build_model_keyboard(models, page)
++            keyboard, page_info = self._build_model_keyboard(
++                models, page, state.get("billing_tag", "")
++            )
+ 
+             pname = state.get("selected_provider_name", "")
+             provider_slug = state.get("selected_provider", "")
+diff --git a/hermes_cli/models.py b/hermes_cli/models.py
+index 558eb008a..e6840445f 100644
+--- a/hermes_cli/models.py
++++ b/hermes_cli/models.py
+@@ -902,41 +902,41 @@ class ProviderEntry(NamedTuple):
+     tui_desc: str   # detailed description for `hermes model` TUI
+ 
+ CANONICAL_PROVIDERS: list[ProviderEntry] = [
+-    ProviderEntry("nous",           "Nous Portal",              "Nous Portal (Everything your agent needs, 300+ models with bundled tool use)"),
+-    ProviderEntry("openrouter",     "OpenRouter",               "OpenRouter (Pay-per-use API aggregator)"),
+-    ProviderEntry("novita",         "NovitaAI",                 "NovitaAI (Cloud: Model API, Agent Sandbox, GPU Cloud)"),
+-    ProviderEntry("lmstudio",       "LM Studio",                "LM Studio (Local desktop app with built-in model server)"),
+-    ProviderEntry("anthropic",      "Anthropic",                "Anthropic (Claude models via API key or Claude Code)"),
+-    ProviderEntry("openai-codex",   "OpenAI Codex",             "OpenAI Codex (Codex CLI via ChatGPT subscription or API key)"),
+-    ProviderEntry("openai-api",     "OpenAI API",               "OpenAI API (api.openai.com, API key)"),
+-    ProviderEntry("alibaba",        "Qwen Cloud",               "Qwen Cloud / DashScope (Qwen + multi-provider)"),
+-    ProviderEntry("xai-oauth",      "xAI Grok OAuth (SuperGrok / Premium+)", "xAI Grok OAuth (SuperGrok / Premium+ subscription)"),
+-    ProviderEntry("xiaomi",         "Xiaomi MiMo",              "Xiaomi MiMo (MiMo-V2.5 and V2 models: pro, omni, flash)"),
+-    ProviderEntry("tencent-tokenhub", "Tencent TokenHub",       "Tencent TokenHub (Hy3 Preview via tokenhub.tencentmaas.com)"),
+-    ProviderEntry("nvidia",         "NVIDIA NIM",               "NVIDIA NIM (Nemotron models via build.nvidia.com or local NIM)"),
+-    ProviderEntry("copilot",        "GitHub Copilot",           "GitHub Copilot (Uses GITHUB_TOKEN or gh auth token)"),
+-    ProviderEntry("copilot-acp",    "GitHub Copilot ACP",       "GitHub Copilot ACP (Spawns copilot --acp --stdio)"),
+-    ProviderEntry("huggingface",    "Hugging Face",             "Hugging Face Inference Providers"),
+-    ProviderEntry("gemini",         "Google AI Studio",         "Google AI Studio (Native Gemini API)"),
+-    ProviderEntry("google-gemini-cli", "Google Gemini (OAuth)",   "Google Gemini via OAuth + Code Assist (Code Assist OAuth flow)"),
+-    ProviderEntry("deepseek",       "DeepSeek",                 "DeepSeek (V3, R1, coder, direct API)"),
+-    ProviderEntry("xai",            "xAI",                      "xAI Grok (Direct API)"),
+-    ProviderEntry("zai",            "Z.AI / GLM",               "Z.AI / GLM (Zhipu direct API)"),
+-    ProviderEntry("kimi-coding",    "Kimi / Kimi Coding Plan",  "Kimi Coding Plan (api.kimi.com & Moonshot API)"),
+-    ProviderEntry("kimi-coding-cn", "Kimi / Moonshot (China)",  "Kimi / Moonshot China (Domestic direct API)"),
+-    ProviderEntry("stepfun",        "StepFun Step Plan",       "StepFun Step Plan (Agent / coding models via Step Plan API)"),
+-    ProviderEntry("minimax",        "MiniMax",                  "MiniMax (Global direct API)"),
+-    ProviderEntry("minimax-oauth",  "MiniMax (OAuth)",          "MiniMax via OAuth browser login (Coding Plan, minimax.io)"),
+-    ProviderEntry("minimax-cn",     "MiniMax (China)",          "MiniMax China (Domestic direct API)"),
+-    ProviderEntry("ollama-cloud",   "Ollama Cloud",             "Ollama Cloud (Cloud-hosted open models, ollama.com)"),
+-    ProviderEntry("arcee",          "Arcee AI",                 "Arcee AI (Trinity models, direct API)"),
+-    ProviderEntry("gmi",            "GMI Cloud",                "GMI Cloud (Multi-model direct API)"),
+-    ProviderEntry("kilocode",       "Kilo Code",                "Kilo Code (Kilo Gateway API)"),
+-    ProviderEntry("opencode-zen",   "OpenCode Zen",             "OpenCode Zen (Curated models, pay-as-you-go)"),
+-    ProviderEntry("opencode-go",    "OpenCode Go",              "OpenCode Go (Open models subscription)"),
+-    ProviderEntry("bedrock",        "AWS Bedrock",              "AWS Bedrock (Claude, Nova, Llama, DeepSeek; IAM or API key)"),
+-    ProviderEntry("azure-foundry",  "Azure Foundry",            "Azure Foundry (OpenAI-style or Anthropic-style endpoint, your Azure AI deployment)"),
+-    ProviderEntry("qwen-oauth",     "Qwen OAuth (Portal)",      "Qwen OAuth (Reuses local Qwen CLI login)"),
++    ProviderEntry("nous",           "Nous Portal [sub]",        "Nous Portal (Everything your agent needs, 300+ models with bundled tool use)"),
++    ProviderEntry("openrouter",     "OpenRouter [pay]",         "OpenRouter (Pay-per-use API aggregator)"),
++    ProviderEntry("novita",         "NovitaAI [pay]",           "NovitaAI (Cloud: Model API, Agent Sandbox, GPU Cloud)"),
++    ProviderEntry("lmstudio",       "LM Studio [local]",        "LM Studio (Local desktop app with built-in model server)"),
++    ProviderEntry("anthropic",      "Anthropic [pay]",          "Anthropic (Claude models via API key or Claude Code)"),
++    ProviderEntry("openai-codex",   "OpenAI Codex [sub]",       "OpenAI Codex (Codex CLI via ChatGPT subscription or API key)"),
++    ProviderEntry("openai-api",     "OpenAI API [pay]",         "OpenAI API (api.openai.com, API key)"),
++    ProviderEntry("alibaba",        "Qwen Cloud [pay]",         "Qwen Cloud / DashScope (Qwen + multi-provider)"),
++    ProviderEntry("xai-oauth",      "xAI Grok OAuth [sub]",    "xAI Grok OAuth (SuperGrok / Premium+ subscription)"),
++    ProviderEntry("xiaomi",         "Xiaomi MiMo [pay]",        "Xiaomi MiMo (MiMo-V2.5 and V2 models: pro, omni, flash)"),
++    ProviderEntry("tencent-tokenhub", "Tencent TokenHub [pay]", "Tencent TokenHub (Hy3 Preview via tokenhub.tencentmaas.com)"),
++    ProviderEntry("nvidia",         "NVIDIA NIM [pay]",         "NVIDIA NIM (Nemotron models via build.nvidia.com or local NIM)"),
++    ProviderEntry("copilot",        "GitHub Copilot [sub]",     "GitHub Copilot (Uses GITHUB_TOKEN or gh auth token)"),
++    ProviderEntry("copilot-acp",    "GitHub Copilot ACP [sub]", "GitHub Copilot ACP (Spawns copilot --acp --stdio)"),
++    ProviderEntry("huggingface",    "Hugging Face [pay]",       "Hugging Face Inference Providers"),
++    ProviderEntry("gemini",         "Google AI Studio [pay]",   "Google AI Studio (Native Gemini API)"),
++    ProviderEntry("google-gemini-cli", "Google Gemini [oauth]", "Google Gemini via OAuth + Code Assist (Code Assist OAuth flow)"),
++    ProviderEntry("deepseek",       "DeepSeek [pay]",           "DeepSeek (V3, R1, coder, direct API)"),
++    ProviderEntry("xai",            "xAI Grok [pay]",           "xAI Grok (Direct API)"),
++    ProviderEntry("zai",            "Z.AI / GLM [pay]",         "Z.AI / GLM (Zhipu direct API)"),
++    ProviderEntry("kimi-coding",    "Kimi Coding Plan [sub]",   "Kimi Coding Plan (api.kimi.com & Moonshot API)"),
++    ProviderEntry("kimi-coding-cn", "Kimi Moonshot CN [pay]",   "Kimi / Moonshot China (Domestic direct API)"),
++    ProviderEntry("stepfun",        "StepFun Step Plan [sub]",  "StepFun Step Plan (Agent / coding models via Step Plan API)"),
++    ProviderEntry("minimax",        "MiniMax [pay]",            "MiniMax (Global direct API)"),
++    ProviderEntry("minimax-oauth",  "MiniMax OAuth [sub]",      "MiniMax via OAuth browser login (Coding Plan, minimax.io)"),
++    ProviderEntry("minimax-cn",     "MiniMax China [pay]",      "MiniMax China (Domestic direct API)"),
++    ProviderEntry("ollama-cloud",   "Ollama Cloud [pay]",       "Ollama Cloud (Cloud-hosted open models, ollama.com)"),
++    ProviderEntry("arcee",          "Arcee AI [pay]",           "Arcee AI (Trinity models, direct API)"),
++    ProviderEntry("gmi",            "GMI Cloud [pay]",          "GMI Cloud (Multi-model direct API)"),
++    ProviderEntry("kilocode",       "Kilo Code [pay]",          "Kilo Code (Kilo Gateway API)"),
++    ProviderEntry("opencode-zen",   "OpenCode Zen [pay]",       "OpenCode Zen (Curated models, pay-as-you-go)"),
++    ProviderEntry("opencode-go",    "OpenCode Go [sub]",        "OpenCode Go (Open models subscription)"),
++    ProviderEntry("bedrock",        "AWS Bedrock [pay]",        "AWS Bedrock (Claude, Nova, Llama, DeepSeek; IAM or API key)"),
++    ProviderEntry("azure-foundry",  "Azure Foundry [pay]",      "Azure Foundry (OpenAI-style or Anthropic-style endpoint, your Azure AI deployment)"),
++    ProviderEntry("qwen-oauth",     "Qwen OAuth [oauth]",       "Qwen OAuth (Reuses local Qwen CLI login)"),
+ ]
+ 
+ # Auto-extend CANONICAL_PROVIDERS with any provider registered in providers/
+@@ -986,13 +986,13 @@ _PROVIDER_LABELS["custom"] = "Custom endpoint"  # special case: not a named prov
+ # Member order is the order shown inside the group submenu.
+ # ---------------------------------------------------------------------------
+ PROVIDER_GROUPS: dict[str, tuple[str, str, list[str]]] = {
+-    "kimi":     ("Kimi / Moonshot", "Coding Plan, Moonshot global & China endpoints", ["kimi-coding", "kimi-coding-cn"]),
+-    "minimax":  ("MiniMax",         "Global, OAuth Coding Plan & China endpoints",     ["minimax", "minimax-oauth", "minimax-cn"]),
+-    "xai":      ("xAI Grok",        "Direct API or SuperGrok / Premium+ OAuth",        ["xai", "xai-oauth"]),
+-    "google":   ("Google Gemini",   "AI Studio API or OAuth + Code Assist",            ["gemini", "google-gemini-cli"]),
+-    "openai":   ("OpenAI",          "Codex CLI or direct OpenAI API",                  ["openai-codex", "openai-api"]),
+-    "opencode": ("OpenCode",        "Zen pay-as-you-go or Go subscription",            ["opencode-zen", "opencode-go"]),
+-    "copilot":  ("GitHub Copilot",  "GitHub token API or copilot --acp process",       ["copilot", "copilot-acp"]),
++    "kimi":     ("Kimi / Moonshot [sub/pay]", "Coding Plan, Moonshot global & China endpoints", ["kimi-coding", "kimi-coding-cn"]),
++    "minimax":  ("MiniMax [pay/sub]",  "Global, OAuth Coding Plan & China endpoints",     ["minimax", "minimax-oauth", "minimax-cn"]),
++    "xai":      ("xAI Grok [pay/sub]", "Direct API or SuperGrok / Premium+ OAuth",        ["xai", "xai-oauth"]),
++    "google":   ("Google Gemini [pay/oauth]", "AI Studio API or OAuth + Code Assist",     ["gemini", "google-gemini-cli"]),
++    "openai":   ("OpenAI [sub/pay]",   "Codex CLI or direct OpenAI API",                  ["openai-codex", "openai-api"]),
++    "opencode": ("OpenCode [pay/sub]", "Zen pay-as-you-go or Go subscription",            ["opencode-zen", "opencode-go"]),
++    "copilot":  ("GitHub Copilot [sub]", "GitHub token API or copilot --acp process",     ["copilot", "copilot-acp"]),
+ }
+ 
+ # Reverse index: member slug -> group_id. Built once at import.
+@@ -1006,6 +1006,60 @@ def provider_group_for_slug(slug: str) -> str:
+     return _SLUG_TO_GROUP.get(str(slug or "").strip().lower(), "")
+ 
+ 
++# Billing model per provider slug. Single source of truth for the [pay]/[sub]/
++# [oauth]/[local] tags shown across every picker surface (CLI + Telegram/Discord
++# inline keyboards). Keep in sync with the tags embedded in CANONICAL_PROVIDERS
++# labels and PROVIDER_GROUPS labels.
++#   pay   = metered API credits (per-token / per-request)
++#   sub   = flat subscription / coding plan
++#   oauth = OAuth login (subscription or free tier behind it)
++#   local = runs on-device, no provider billing
++PROVIDER_BILLING: dict[str, str] = {
++    "nous": "sub",
++    "openrouter": "pay",
++    "novita": "pay",
++    "lmstudio": "local",
++    "anthropic": "pay",
++    "openai-codex": "sub",
++    "openai-api": "pay",
++    "alibaba": "pay",
++    "alibaba-coding-plan": "sub",
++    "xai-oauth": "sub",
++    "xiaomi": "pay",
++    "tencent-tokenhub": "pay",
++    "nvidia": "pay",
++    "copilot": "sub",
++    "copilot-acp": "sub",
++    "huggingface": "pay",
++    "gemini": "pay",
++    "google-gemini-cli": "oauth",
++    "deepseek": "pay",
++    "xai": "pay",
++    "zai": "pay",
++    "kimi-coding": "sub",
++    "kimi-coding-cn": "pay",
++    "stepfun": "sub",
++    "minimax": "pay",
++    "minimax-oauth": "sub",
++    "minimax-cn": "pay",
++    "ollama-cloud": "pay",
++    "arcee": "pay",
++    "gmi": "pay",
++    "kilocode": "pay",
++    "opencode-zen": "pay",
++    "opencode-go": "sub",
++    "bedrock": "pay",
++    "azure-foundry": "pay",
++    "qwen-oauth": "oauth",
++}
++
++
++def provider_billing_tag(slug: str) -> str:
++    """Return the billing tag (``pay``/``sub``/``oauth``/``local``) for a
++    provider slug, or "" if unknown. Display-only."""
++    return PROVIDER_BILLING.get(str(slug or "").strip().lower(), "")
++
++
+ def group_providers(slugs):
+     """Fold a flat ordered slug iterable into picker rows by provider group.
+ 
+diff --git a/hermes_cli/providers.py b/hermes_cli/providers.py
+index ba25f7e63..084aec02c 100644
+--- a/hermes_cli/providers.py
++++ b/hermes_cli/providers.py
+@@ -365,18 +365,18 @@ ALIASES: Dict[str, str] = {
+ # not in the catalog.
+ 
+ _LABEL_OVERRIDES: Dict[str, str] = {
+-    "nous": "Nous Portal",
+-    "openai-codex": "OpenAI Codex",
+-    "copilot-acp": "GitHub Copilot ACP",
+-    "stepfun": "StepFun Step Plan",
+-    "xiaomi": "Xiaomi MiMo",
+-    "gmi": "GMI Cloud",
+-    "tencent-tokenhub": "Tencent TokenHub",
+-    "lmstudio": "LM Studio",
+-    "local": "Local endpoint",
+-    "bedrock": "AWS Bedrock",
+-    "ollama-cloud": "Ollama Cloud",
+-    "xai-oauth": "xAI Grok OAuth (SuperGrok / Premium+)",
++    "nous": "Nous Portal [sub]",
++    "openai-codex": "OpenAI Codex [sub]",
++    "copilot-acp": "GitHub Copilot ACP [sub]",
++    "stepfun": "StepFun Step Plan [sub]",
++    "xiaomi": "Xiaomi MiMo [pay]",
++    "gmi": "GMI Cloud [pay]",
++    "tencent-tokenhub": "Tencent TokenHub [pay]",
++    "lmstudio": "LM Studio [local]",
++    "local": "Local endpoint [local]",
++    "bedrock": "AWS Bedrock [pay]",
++    "ollama-cloud": "Ollama Cloud [pay]",
++    "xai-oauth": "xAI Grok OAuth [sub]",
+ }
+ 
+ 

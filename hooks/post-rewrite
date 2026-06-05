@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Auto-reapply local Hermes mods after `git pull` (i.e. `hermes update`).
+# Non-fatal: never block the merge if a patch conflicts.
+bash "${HERMES_PATCH_DIR:-$HOME/.hermes/local-patches}/apply.sh" || true
