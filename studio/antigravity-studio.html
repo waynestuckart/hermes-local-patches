@@ -315,7 +315,7 @@ a{color:var(--cyan);text-decoration:none}
       <button class="pill ghost">Mission&nbsp;Control</button>
     </nav>
   </div>
-  <div class="status-strip" id="statusStrip"></div>
+  <div class="status-strip" id="statusStrip"><span class="chip"><span class="dot pulse"></span>CLAUDE</span><span class="chip"><span class="dot pulse"></span>HERMES</span><span class="chip"><span class="dot pulse"></span>ANTIGRAVITY</span><span class="chip"><span class="dot pulse"></span>HA · LIVE</span><span class="chip"><span class="dot pulse"></span>CHATGPT</span><span class="chip"><span class="dot pulse"></span>GEMINI</span><span class="chip"><span class="dot idle"></span>AI-Q</span><span class="chip"><span class="dot pulse"></span>CAMOFOX</span><span class="chip"><span class="dot pulse"></span>TAILSCALE</span></div>
 </header>
 
 <div class="wrap">
@@ -326,7 +326,7 @@ a{color:var(--cyan);text-decoration:none}
     <h1>Antigravity&nbsp;<span class="grad">Studio</span></h1>
     <p>One orchestrator, a fleet of specialized units, and an artifact-first loop —
        spawn agents, watch them work in parallel, and verify every deliverable at a glance.</p>
-    <div class="build" id="buildline"></div>
+    <div class="build" id="buildline">build — Antigravity Studio v1 · single-file · static-rendered fallback</div>
 
     <div class="cmdbar">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c6075" stroke-width="2">
@@ -342,14 +342,68 @@ a{color:var(--cyan);text-decoration:none}
   </section>
 
   <!-- ============================ STATS ============================ -->
-  <div class="stats" id="stats"></div>
+  <div class="stats" id="stats"><div class="stat" style="--c:var(--green)"><div class="lab">Units Online</div><div class="val">9/9</div><div class="sub">fleet nominal</div></div><div class="stat" style="--c:var(--orange)"><div class="lab">Missions Active</div><div class="val">4</div><div class="sub">1 awaiting review</div></div><div class="stat" style="--c:var(--purple)"><div class="lab">Artifacts</div><div class="val">6</div><div class="sub">verifiable deliverables</div></div><div class="stat" style="--c:var(--amber)"><div class="lab">Spend Today</div><div class="val">$4.12</div><div class="sub">metered API</div></div><div class="stat" style="--c:var(--cyan)"><div class="lab">Tokens 24h</div><div class="val">1.84M</div><div class="sub">across providers</div></div><div class="stat" style="--c:var(--green)"><div class="lab">Cron Fleet</div><div class="val">22/22</div><div class="sub">all green</div></div></div>
 
   <!-- ============================ MANAGER SURFACE ============================ -->
   <div class="section-head" id="manager">
     <h2>Manager Surface</h2><div class="line"></div>
-    <span class="count" id="agentCount">— units</span>
+    <span class="count" id="agentCount">9 specialized units</span>
   </div>
-  <div class="roster" id="roster"></div>
+  <div class="roster" id="roster"><div class="agent" style="--ac:var(--orange)">
+   <div class="head"><div class="av">🛰️</div><div><div class="nm">Dax</div><div class="role">Pilot & Orchestrator</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Personal OS pilot. Multi-agent orchestration, priority routing, complexity-based model tiering.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">Dynamic</div></div><div><div class="k">Provider</div><div class="v">Hermes</div></div><div><div class="k">Load</div><div class="v">78%</div></div></div>
+   <div class="spark"><i style="height:88%"></i><i style="height:93%"></i><i style="height:71%"></i><i style="height:66%"></i><i style="height:79%"></i><i style="height:100%"></i><i style="height:66%"></i><i style="height:55%"></i><i style="height:100%"></i><i style="height:84%"></i><i style="height:52%"></i><i style="height:85%"></i><i style="height:92%"></i><i style="height:76%"></i><i style="height:64%"></i><i style="height:76%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--purple)">
+   <div class="head"><div class="av">✦</div><div><div class="nm">Claude</div><div class="role">Engineering & Code</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Deep code, refactors, reviews, and long-horizon implementation plans.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">opus-4.8</div></div><div><div class="k">Provider</div><div class="v">Anthropic</div></div><div><div class="k">Load</div><div class="v">64%</div></div></div>
+   <div class="spark"><i style="height:74%"></i><i style="height:79%"></i><i style="height:57%"></i><i style="height:52%"></i><i style="height:65%"></i><i style="height:86%"></i><i style="height:52%"></i><i style="height:41%"></i><i style="height:92%"></i><i style="height:70%"></i><i style="height:38%"></i><i style="height:71%"></i><i style="height:78%"></i><i style="height:62%"></i><i style="height:50%"></i><i style="height:62%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--cyan)">
+   <div class="head"><div class="av">◐</div><div><div class="nm">Hermes</div><div class="role">Reasoning Core</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Local reasoning engine behind Dax. Tool-use, function calling, on-prem control.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">hermes-4</div></div><div><div class="k">Provider</div><div class="v">NousResearch</div></div><div><div class="k">Load</div><div class="v">51%</div></div></div>
+   <div class="spark"><i style="height:61%"></i><i style="height:66%"></i><i style="height:44%"></i><i style="height:39%"></i><i style="height:52%"></i><i style="height:73%"></i><i style="height:39%"></i><i style="height:28%"></i><i style="height:79%"></i><i style="height:57%"></i><i style="height:25%"></i><i style="height:58%"></i><i style="height:65%"></i><i style="height:49%"></i><i style="height:37%"></i><i style="height:49%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--green)">
+   <div class="head"><div class="av">◑</div><div><div class="nm">ChatGPT</div><div class="role">Research & Drafting</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Fast drafting, summarization, and structured extraction across the inbox.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">gpt-5.2</div></div><div><div class="k">Provider</div><div class="v">OpenAI</div></div><div><div class="k">Load</div><div class="v">33%</div></div></div>
+   <div class="spark"><i style="height:43%"></i><i style="height:48%"></i><i style="height:26%"></i><i style="height:21%"></i><i style="height:34%"></i><i style="height:55%"></i><i style="height:21%"></i><i style="height:12%"></i><i style="height:61%"></i><i style="height:39%"></i><i style="height:12%"></i><i style="height:40%"></i><i style="height:47%"></i><i style="height:31%"></i><i style="height:19%"></i><i style="height:31%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--blue)">
+   <div class="head"><div class="av">✧</div><div><div class="nm">Gemini</div><div class="role">Multimodal & Vision</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Image, audio, and document understanding. Feeds the vision pipeline.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">gemini-3</div></div><div><div class="k">Provider</div><div class="v">Google</div></div><div><div class="k">Load</div><div class="v">42%</div></div></div>
+   <div class="spark"><i style="height:52%"></i><i style="height:57%"></i><i style="height:35%"></i><i style="height:30%"></i><i style="height:43%"></i><i style="height:64%"></i><i style="height:30%"></i><i style="height:19%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:16%"></i><i style="height:49%"></i><i style="height:56%"></i><i style="height:40%"></i><i style="height:28%"></i><i style="height:40%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--orange)">
+   <div class="head"><div class="av">🚀</div><div><div class="nm">Antigravity</div><div class="role">Build & Deploy Studio</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Agent-first build platform. Parallel build agents, artifacts, browser recordings, ship-to-VPS.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">antigravity-2</div></div><div><div class="k">Provider</div><div class="v">Google</div></div><div><div class="k">Load</div><div class="v">88%</div></div></div>
+   <div class="spark"><i style="height:98%"></i><i style="height:100%"></i><i style="height:81%"></i><i style="height:76%"></i><i style="height:89%"></i><i style="height:100%"></i><i style="height:76%"></i><i style="height:65%"></i><i style="height:100%"></i><i style="height:94%"></i><i style="height:62%"></i><i style="height:95%"></i><i style="height:100%"></i><i style="height:86%"></i><i style="height:74%"></i><i style="height:86%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--purple)">
+   <div class="head"><div class="av">◼</div><div><div class="nm">AI-Q Research</div><div class="role">Deep Research</div></div><div class="st"><span class="dot idle"></span>idle</div></div>
+   <div class="desc">Multi-hop web research with adversarial verification and cited reports.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">perplexity-pro</div></div><div><div class="k">Provider</div><div class="v">AI-Q</div></div><div><div class="k">Load</div><div class="v">12%</div></div></div>
+   <div class="spark"><i style="height:22%"></i><i style="height:27%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:13%"></i><i style="height:34%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:40%"></i><i style="height:18%"></i><i style="height:12%"></i><i style="height:19%"></i><i style="height:26%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:12%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Wake</button></div>
+ </div><div class="agent" style="--ac:var(--rose)">
+   <div class="head"><div class="av">🦊</div><div><div class="nm">Camofox Browser</div><div class="role">Web Automation</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Stealth headless browsing for scraping, fills, and session capture.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">camoufox</div></div><div><div class="k">Provider</div><div class="v">local</div></div><div><div class="k">Load</div><div class="v">57%</div></div></div>
+   <div class="spark"><i style="height:67%"></i><i style="height:72%"></i><i style="height:50%"></i><i style="height:45%"></i><i style="height:58%"></i><i style="height:79%"></i><i style="height:45%"></i><i style="height:34%"></i><i style="height:85%"></i><i style="height:63%"></i><i style="height:31%"></i><i style="height:64%"></i><i style="height:71%"></i><i style="height:55%"></i><i style="height:43%"></i><i style="height:55%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--green)">
+   <div class="head"><div class="av">⌂</div><div><div class="nm">Home Assistant</div><div class="role">Home Ops</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Room status, climate, lights, media, and the morning concierge routine.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">local</div></div><div><div class="k">Provider</div><div class="v">HA</div></div><div><div class="k">Load</div><div class="v">24%</div></div></div>
+   <div class="spark"><i style="height:34%"></i><i style="height:39%"></i><i style="height:17%"></i><i style="height:12%"></i><i style="height:25%"></i><i style="height:46%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:52%"></i><i style="height:30%"></i><i style="height:12%"></i><i style="height:31%"></i><i style="height:38%"></i><i style="height:22%"></i><i style="height:12%"></i><i style="height:22%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div></div>
 
   <!-- ============================ MISSIONS + RAIL ============================ -->
   <div class="section-head" id="queue">
@@ -357,7 +411,7 @@ a{color:var(--cyan);text-decoration:none}
     <span class="count">live orchestration</span>
   </div>
   <div class="cols">
-    <div class="board" id="board"></div>
+    <div class="board" id="board"><div class="lane"><h3><span class="dot idle" style="background:var(--ink-faint);box-shadow:0 0 8px var(--ink-faint)"></span>Queued<span class="n">2</span></h3><div class="task"><div class="tt">Antigravity: scaffold Emotiva DTC landing page</div><div class="tm"><span class="tag" style="--tc:var(--orange)">build</span>· Antigravity</div></div><div class="task"><div class="tt">AI-Q: competitive teardown — DTC audio brands</div><div class="tm"><span class="tag" style="--tc:var(--purple)">research</span>· AI-Q</div></div></div><div class="lane"><h3><span class="dot pulse" style="background:var(--orange);box-shadow:0 0 8px var(--orange)"></span>Running<span class="n">2</span></h3><div class="task"><div class="tt">Camofox: capture Skool boardroom thread</div><div class="tm"><span class="tag" style="--tc:var(--rose)">scrape</span>· Camofox</div><div class="bar"><i style="width:62%;--tc:var(--rose)"></i></div></div><div class="task"><div class="tt">Claude: refactor provider-health useEffect refs</div><div class="tm"><span class="tag" style="--tc:var(--purple)">code</span>· Claude</div><div class="bar"><i style="width:41%;--tc:var(--purple)"></i></div></div></div><div class="lane"><h3><span class="dot warn" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span>Review<span class="n">1</span></h3><div class="task"><div class="tt">Gemini: alt-text pass on 38 product shots</div><div class="tm"><span class="tag" style="--tc:var(--blue)">vision</span>· Gemini</div><div class="bar"><i style="width:100%;--tc:var(--blue)"></i></div></div></div><div class="lane"><h3><span class="dot " style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>Done<span class="n">2</span></h3><div class="task"><div class="tt">Daily Hermes backup → dax-vault</div><div class="tm"><span class="tag" style="--tc:var(--green)">cron</span>· Dax</div><div class="bar"><i style="width:100%;--tc:var(--green)"></i></div></div><div class="task"><div class="tt">OpenRouter spend report → Telegram</div><div class="tm"><span class="tag" style="--tc:var(--amber)">report</span>· Dax</div><div class="bar"><i style="width:100%;--tc:var(--amber)"></i></div></div></div></div>
     <aside class="rail">
 
       <div class="card accent" style="--c:var(--green)">
@@ -365,24 +419,22 @@ a{color:var(--cyan);text-decoration:none}
           <span class="t">Node Health</span>
           <button class="btn-probe" id="probeBtn">Probe</button>
         </div>
-        <div class="health-body" id="healthBody">
-          <div class="big" style="color:var(--ink-faint)">awaiting probe…</div>
-        </div>
+        <div class="health-body" id="healthBody"><div class="big" style="color:var(--green)">● 4 nodes reachable</div><div style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:6px">gateway 34ms · tailscale up · 5.78.133.56</div></div>
       </div>
 
       <div class="card accent" style="--c:var(--purple)">
-        <div class="card-h"><span class="t">Provider Heatmap</span><span class="meta" id="hmMeta">—</span></div>
-        <div class="health-grid" id="heatmap"></div>
+        <div class="card-h"><span class="t">Provider Heatmap</span><span class="meta" id="hmMeta">8/10 healthy</span></div>
+        <div class="health-grid" id="heatmap"><div class="cell ok" title="Hermes · ok">Herm</div><div class="cell ok" title="Anthropic · ok">Anth</div><div class="cell ok" title="OpenAI · ok">Open</div><div class="cell ok" title="Google · ok">Goog</div><div class="cell ok" title="NousResearch · ok">Nous</div><div class="cell warn" title="OpenRouter · warn">Open</div><div class="cell warn" title="AI-Q · warn">AI-Q</div><div class="cell ok" title="HA · ok">HA</div><div class="cell ok" title="Camoufox · ok">Camo</div><div class="cell ok" title="Local · ok">Loca</div></div>
       </div>
 
       <div class="card accent" style="--c:var(--amber)">
         <div class="card-h"><span class="t">Cost Savings</span><span class="meta">30d</span></div>
-        <div id="costBody"></div>
+        <div id="costBody"><div class="metric"><span class="ml">NotebookLM vs API</span><span class="mv" style="color:var(--ink)">$312</span></div><div class="metric"><span class="ml">Local Hermes routing</span><span class="mv" style="color:var(--ink)">$184</span></div><div class="metric"><span class="ml">Subscription over metered</span><span class="mv" style="color:var(--ink)">$96</span></div><div class="metric"><span class="ml">Total saved</span><span class="mv" style="color:var(--amber)">$592</span></div></div>
       </div>
 
       <div class="card accent" style="--c:var(--cyan)">
         <div class="card-h"><span class="t">Live Activity</span><span class="meta"><span class="dot pulse"></span></span></div>
-        <div class="feed" id="feed"></div>
+        <div class="feed" id="feed"><div class="log"><div class="ts">11:48:02</div><div class="ld" style="--lc:var(--orange)"></div><div class="lt"><b>Dax</b> routed “build” → Antigravity</div></div><div class="log"><div class="ts">11:47:40</div><div class="ld" style="--lc:var(--rose)"></div><div class="lt"><b>Camofox</b> captured Skool thread (62%)</div></div><div class="log"><div class="ts">11:46:55</div><div class="ld" style="--lc:var(--purple)"></div><div class="lt"><b>Claude</b> opened PR on provider-health</div></div><div class="log"><div class="ts">11:45:10</div><div class="ld" style="--lc:var(--green)"></div><div class="lt"><b>Dax</b> backup → dax-vault ✓</div></div><div class="log"><div class="ts">11:44:32</div><div class="ld" style="--lc:var(--amber)"></div><div class="lt"><b>OpenRouter</b> spend report sent</div></div></div>
       </div>
 
     </aside>
@@ -393,7 +445,7 @@ a{color:var(--cyan);text-decoration:none}
     <h2>Artifacts</h2><div class="line"></div>
     <span class="count">verify the agent's logic at a glance</span>
   </div>
-  <div class="arts" id="artGrid"></div>
+  <div class="arts" id="artGrid"><div class="art" style="--ac:var(--orange)"><div class="thumb "><span class="ic">🗂️</span></div><div class="body"><div class="ti">Emotiva launch — implementation plan</div><div class="tb"><span class="badge" style="--ac:var(--orange)">plan</span>Antigravity · 2m ago</div></div></div><div class="art" style="--ac:var(--purple)"><div class="thumb "><span class="ic">📑</span></div><div class="body"><div class="ti">DTC audio market — research report</div><div class="tb"><span class="badge" style="--ac:var(--purple)">report</span>AI-Q · 14m ago</div></div></div><div class="art" style="--ac:var(--cyan)"><div class="thumb shot"><span class="ic">🖼️</span></div><div class="body"><div class="ti">dashboard.wayneautomates.com</div><div class="tb"><span class="badge" style="--ac:var(--cyan)">screenshot</span>Camofox · 31m ago</div></div></div><div class="art" style="--ac:var(--rose)"><div class="thumb rec"><span class="ic">⏺️</span></div><div class="body"><div class="ti">checkout flow — browser recording</div><div class="tb"><span class="badge" style="--ac:var(--rose)">recording</span>Camofox · 38m ago</div></div></div><div class="art" style="--ac:var(--green)"><div class="thumb "><span class="ic">✅</span></div><div class="body"><div class="ti">morning summary — task list</div><div class="tb"><span class="badge" style="--ac:var(--green)">tasklist</span>Dax · 1h ago</div></div></div><div class="art" style="--ac:var(--blue)"><div class="thumb "><span class="ic">⌗</span></div><div class="body"><div class="ti">provider-health v3 — diff</div><div class="tb"><span class="badge" style="--ac:var(--blue)">patch</span>Claude · 2h ago</div></div></div></div>
 
   <footer class="foot">
     <span>WAYNE OS · ANTIGRAVITY STUDIO</span>
@@ -666,6 +718,7 @@ function logActivity(text,color='var(--cyan)'){
   while(f.children.length>40)f.lastChild.remove();
 }
 function seedFeed(){
+  $('#feed').innerHTML='';   // clear the static no-JS fallback before seeding
   const seed=[
     ['<b>Dax</b> routed “build” → Antigravity','var(--orange)'],
     ['<b>Camofox</b> captured Skool thread (62%)','var(--rose)'],
