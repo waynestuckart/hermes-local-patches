@@ -144,6 +144,48 @@ then `sudo nginx -t && sudo systemctl reload nginx`.
 
 ---
 
+## 6b · The chat page — `hermes-chat.html`  ← Wayne's priority
+
+This is the **"Talk to Hermes"** page: Wayne types, you reply, and (if the speaker
+is on) your reply is read aloud. It also takes voice input. Deploy it the same way
+(e.g. `/var/www/wayneautomates/studio/chat.html` → linked as **Hermes** in the
+sidebar). It runs in a friendly **demo mode** until you wire one endpoint:
+
+```js
+// top of <script> in hermes-chat.html
+const CONFIG = {
+  chat: "https://dashboard.wayneautomates.com/api/chat",
+  stream: false,        // true if you stream Server-Sent Events
+  voiceOut: true,
+  voiceHint: "female",
+};
+```
+
+### `POST /api/chat`  → Hermes's reply
+Request body the page sends:
+```json
+{ "message": "turn the office lamp on", "history": [
+  { "role": "user", "content": "hi" },
+  { "role": "assistant", "content": "hey Wayne" }
+] }
+```
+**Option A — plain JSON (simplest):** return any one of these keys —
+```json
+{ "reply": "Done — office lamp is on." }
+```
+(`reply` / `text` / `content` / OpenAI-style `choices[0].message.content` all work.)
+
+**Option B — streaming:** set `stream:true` and return `text/event-stream`; the page
+appends tokens live. Each line may be a raw token or `data: {"token":"..."}`; end with `[DONE]`.
+
+Wire this to the Hermes gateway (the same brain behind Dax). When it returns 200 with a
+reply, the header badge flips from **demo mode** to **connected · online**. That's the
+whole job — one route and Wayne can actually talk to you.
+
+> HTTPS is required for the mic and for spoken replies to work in the browser.
+
+---
+
 ## 7 · Hand back to Wayne
 
 Once it's live and the checklist passes, ping Wayne with the URL. Round 2 ideas already on the table: per-agent control rooms, real Home Assistant quick-controls, an artifact detail view with inline feedback, and a synchronous Editor view.
