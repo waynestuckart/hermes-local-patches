@@ -1,0 +1,62 @@
+diff --git a/agent/chat_completion_helpers.py b/agent/chat_completion_helpers.py
+index cbbc913..649e386 100644
+--- a/agent/chat_completion_helpers.py
++++ b/agent/chat_completion_helpers.py
+@@ -975,18 +975,14 @@ def build_assistant_message(agent, assistant_message, finish_reason: str) -> dic
+                     "arguments": tool_call.function.arguments
+                 },
+             }
+-            # Defence-in-depth: redact credentials from tool call arguments
+-            # before they enter conversation history. Tool execution uses the
+-            # raw API response object, not this dict, so redacting the
+-            # persisted shape is safe and only affects storage. Catches the
+-            # case where a model accidentally inlines a secret into a tool
+-            # call (e.g. `terminal(command="curl -H 'Authorization: Bearer
+-            # sk-...'")`). (#19798)
+-            if isinstance(tc_dict["function"]["arguments"], str):
+-                from agent.redact import redact_sensitive_text
+-                tc_dict["function"]["arguments"] = redact_sensitive_text(
+-                    tc_dict["function"]["arguments"]
+-                )
++            # NOTE: tool-call arguments are persisted VERBATIM — no secret
++            # redaction here. The model authored these arguments, so masking
++            # them in conversation history hides nothing from it; it only
++            # corrupts the model's view of its own prior call on the next turn,
++            # which breaks values it legitimately round-trips (an API key
++            # written via write_file/terminal, JSON, code/heredoc literals).
++            # Secrets are still masked in tool OUTPUT and logs. (replaces the
++            # #19798 argument-redaction, which mangled functional payloads)
+             # Preserve extra_content (e.g. Gemini thought_signature) so it
+             # is sent back on subsequent API calls.  Without this, Gemini 3
+             # thinking models reject the request with a 400 error.
+diff --git a/agent/context_compressor.py b/agent/context_compressor.py
+index 079c4b0..d05a68b 100644
+--- a/agent/context_compressor.py
++++ b/agent/context_compressor.py
+@@ -978,7 +978,13 @@ class ContextCompressor(ContextEngine):
+                         if isinstance(tc, dict):
+                             fn = tc.get("function", {})
+                             name = fn.get("name", "?")
+-                            args = redact_sensitive_text(fn.get("arguments", ""))
++                            # Keep tool-call arguments verbatim (no secret
++                            # redaction): the model authored them, and masking
++                            # here corrupts replay of values it round-trips
++                            # (API keys, JSON, code literals). Output/log
++                            # redaction is unaffected.
++                            raw_args = fn.get("arguments", "")
++                            args = raw_args if isinstance(raw_args, str) else str(raw_args)
+                             # Truncate long arguments but keep enough for context
+                             if len(args) > self._TOOL_ARGS_MAX:
+                                 args = args[:self._TOOL_ARGS_HEAD] + "..."
+@@ -1053,7 +1059,10 @@ class ContextCompressor(ContextEngine):
+             if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                 for tc in msg.get("tool_calls") or []:
+                     name, raw_args = _extract_tool_call_name_and_args(tc)
+-                    args = redact_sensitive_text(raw_args)
++                    # Tool-call arguments kept verbatim (no secret redaction):
++                    # masking corrupts JSON parsing below and the model's replay
++                    # of values it authored. Output/log redaction is unaffected.
++                    args = raw_args if isinstance(raw_args, str) else str(raw_args)
+                     call_id = _extract_tool_call_id(tc)
+                     if call_id:
+                         call_id_to_tool[call_id] = (name, args)
