@@ -1,8 +1,10 @@
 # hermes-local-patches
 
 Keep local source modifications to a [Hermes Agent](https://github.com/NousResearch/hermes-agent)
-install alive across `hermes update` — and a worked example that adds **billing-model
-tags** (`[pay]` / `[sub]` / `[oauth]` / `[local]`) to the `/model` picker.
+install alive across `hermes update` — plus two worked examples: **billing-model
+tags** (`[pay]` / `[sub]` / `[oauth]` / `[local]`) in the `/model` picker, and a
+friendlier provider label when Hermes runs routed through
+[NVIDIA NemoClaw](https://github.com/NVIDIA/NemoClaw).
 
 ---
 
@@ -84,10 +86,32 @@ a provider is one line. **This feature is upstreamed** as
 [NousResearch/hermes-agent #39403](https://github.com/NousResearch/hermes-agent/pull/39403);
 once it merges, the patch becomes a no-op and `apply.sh` simply skips it.
 
+## Worked example: NemoClaw routed-provider label
+
+When Hermes runs inside an [NVIDIA NemoClaw](https://github.com/NVIDIA/NemoClaw)
+OpenShell sandbox (`nemohermes`), NemoClaw points `model.base_url` at its
+host-side router, `https://inference.local/v1`, with `model.provider: custom` —
+so real provider credentials never enter the sandbox. Stock Hermes has no idea
+what `inference.local` is, so `hermes status` and the `/model` picker just show
+the generic `Custom endpoint` label, which makes it hard to tell at a glance
+that you're running through NemoClaw at all.
+
+`patches/0002-nemoclaw-routed-provider-label.patch` adds a small
+`_is_nemoclaw_routed_endpoint()` check to `hermes_cli/models.py`: when the
+`custom` endpoint's host is `inference.local`, `provider_label()` returns
+`NemoClaw (routed)` instead.
+
+```
+Before:  Provider:     Custom endpoint
+After:   Provider:     NemoClaw (routed)
+```
+
 ## Repo layout
 
 ```
-patches/    0001-model-picker-billing-tags.patch  + a README on the patch system
+patches/    0001-model-picker-billing-tags.patch
+            0002-nemoclaw-routed-provider-label.patch
+            + a README on the patch system
 scripts/    apply.sh (idempotent re-applier)  ·  install.sh (wires hooks)
 hooks/      post-merge, post-rewrite           (installed into .git/hooks/)
 docs/       SURVIVE-UPDATES.md                 (the pattern, in depth)
@@ -98,7 +122,7 @@ docs/       SURVIVE-UPDATES.md                 (the pattern, in depth)
 ```bash
 cd "$HERMES_AGENT_DIR"
 # ...make your edits...
-git diff <files> > /path/to/hermes-local-patches/patches/0002-my-change.patch
+git diff <files> > /path/to/hermes-local-patches/patches/0003-my-change.patch
 ```
 
 `apply.sh` picks up every `*.patch` in the patch dir, in name order.
