@@ -84,10 +84,35 @@ a provider is one line. **This feature is upstreamed** as
 [NousResearch/hermes-agent #39403](https://github.com/NousResearch/hermes-agent/pull/39403);
 once it merges, the patch becomes a no-op and `apply.sh` simply skips it.
 
+## Fix: pasted API keys no longer get truncated
+
+`patches/0002-secret-prompt-paste-no-truncate.patch` fixes the masked secret
+prompt that **every** `hermes` API-key / token entry goes through
+(`hermes_cli/secret_prompt.py` — the "hidden, can't-see-it" input).
+
+The prompt reads the terminal in raw mode and treated any carriage return or
+newline as **Enter**. When you paste a key that carries a trailing newline (most
+copies do) or one that's wrapped across lines, the embedded newline submitted the
+prompt early — Hermes kept only the text **before** the first newline and the rest
+spilled onto the shell. The key looked "truncated," so you ended up exporting it
+by hand in a script.
+
+The patch turns on the terminal's **bracketed-paste** mode and treats newlines
+that arrive *inside a paste* as part of the secret (flattening them away) rather
+than as Enter, then strips the result. A real Enter keypress still submits. Net
+effect: a pasted key always lands on **one clean line, in full** —
+
+```
+  API key (sk-ant-...): ****************************************   ← whole key captured
+```
+
+No upstream PR yet; it's a candidate to send to `hermes-agent`.
+
 ## Repo layout
 
 ```
-patches/    0001-model-picker-billing-tags.patch  + a README on the patch system
+patches/    0001-model-picker-billing-tags.patch
+            0002-secret-prompt-paste-no-truncate.patch  + a README on the patch system
 scripts/    apply.sh (idempotent re-applier)  ·  install.sh (wires hooks)
 hooks/      post-merge, post-rewrite           (installed into .git/hooks/)
 docs/       SURVIVE-UPDATES.md                 (the pattern, in depth)
