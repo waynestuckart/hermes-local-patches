@@ -1,8 +1,9 @@
 # hermes-local-patches
 
 Keep local source modifications to a [Hermes Agent](https://github.com/NousResearch/hermes-agent)
-install alive across `hermes update` — and a worked example that adds **billing-model
-tags** (`[pay]` / `[sub]` / `[oauth]` / `[local]`) to the `/model` picker.
+install alive across `hermes update` — plus a couple of worked examples: **billing-model
+tags** (`[pay]` / `[sub]` / `[oauth]` / `[local]`) in the `/model` picker, and a
+**credential-handoff plugin** that lets Hermes ask for API keys without ever seeing them.
 
 ---
 
@@ -84,13 +85,45 @@ a provider is one line. **This feature is upstreamed** as
 [NousResearch/hermes-agent #39403](https://github.com/NousResearch/hermes-agent/pull/39403);
 once it merges, the patch becomes a no-op and `apply.sh` simply skips it.
 
+## Worked example: handing Hermes an API key without her seeing it
+
+Hermes (sensibly) refuses to take secrets in chat — conversation turns get sent
+to the model provider and persisted to transcripts/logs, so a key typed there is
+burned the moment you send it. Her fallback — "go edit `~/.hermes/.env` in a
+terminal" — assumes you're at a machine with one.
+
+But Mission Control (the web dashboard) already has the right plumbing: its
+**Keys & Environment** page writes credentials straight from your browser to
+`.env` via `PUT /api/env`, with no LLM call anywhere on that path. The plaintext
+never enters a prompt, a tool result, or a log line.
+
+`plugins/credential-handoff/` adds one tool, `request_credential`, that teaches
+Hermes to use that path: she asks for a credential by **name only**, gets back a
+bare `is_set: true/false` (never the value) plus instructions to relay, and you
+paste the key into Mission Control yourself. She then re-checks `is_set` and
+carries on — having never touched the plaintext. Only names already on Hermes's
+known credential allowlist can be requested, so a confused model turn can't steer
+you into pasting something sensitive into the wrong field.
+
+Unlike the patches above, plugins live in `~/.hermes/plugins/` — a directory
+`hermes update` never touches — so this needs no patch-survival machinery, just
+a one-time install:
+
+```bash
+./scripts/install-plugin.sh credential-handoff
+```
+
+See [plugins/credential-handoff/README.md](plugins/credential-handoff/README.md)
+for details.
+
 ## Repo layout
 
 ```
 patches/    0001-model-picker-billing-tags.patch  + a README on the patch system
-scripts/    apply.sh (idempotent re-applier)  ·  install.sh (wires hooks)
-hooks/      post-merge, post-rewrite           (installed into .git/hooks/)
-docs/       SURVIVE-UPDATES.md                 (the pattern, in depth)
+plugins/    credential-handoff/                   (blind credential request tool)
+scripts/    apply.sh ・ install.sh ・ install-plugin.sh
+hooks/      post-merge, post-rewrite               (installed into .git/hooks/)
+docs/       SURVIVE-UPDATES.md                     (the pattern, in depth)
 ```
 
 ## Adding your own patch
