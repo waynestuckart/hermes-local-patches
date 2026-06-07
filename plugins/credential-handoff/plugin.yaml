@@ -1,0 +1,10 @@
+name: credential-handoff
+version: "1.0.0"
+description: >-
+  Lets Hermes ask for API keys and other credentials through the dashboard's
+  Keys & Environment page instead of chat — so secrets never enter the
+  model's context, transcripts, or logs.
+author: Wayne Stuckart
+kind: standalone
+provides_tools:
+  - request_credential
