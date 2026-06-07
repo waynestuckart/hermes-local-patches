@@ -105,7 +105,8 @@ def _handle_request_credential(args: dict, **kwargs) -> str:
                 ),
             })
 
-        is_set = bool(get_env_value(env_var))
+        raw = get_env_value(env_var)
+        is_set = raw is not None and str(raw).strip() != ""
         label = info.get("description") or env_var
 
         message = (
@@ -116,7 +117,11 @@ def _handle_request_credential(args: dict, **kwargs) -> str:
             "conversation, this model, or any log."
         )
         if reason:
-            message += f" Why it's needed: {reason}"
+            # Sanitize: model-supplied text — strip newlines and cap length
+            reason = reason.replace("\n", " ").replace("\r", "")[:80]
+            message += (
+                f" (Verbatim model-supplied reason: {reason})"
+            )
         message += (
             " Once they say it's done, call request_credential again with "
             "the same env_var to confirm — you'll only get true/false back, "
