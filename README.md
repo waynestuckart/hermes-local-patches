@@ -84,10 +84,67 @@ a provider is one line. **This feature is upstreamed** as
 [NousResearch/hermes-agent #39403](https://github.com/NousResearch/hermes-agent/pull/39403);
 once it merges, the patch becomes a no-op and `apply.sh` simply skips it.
 
+## Fix: pasted API keys no longer get truncated
+
+`patches/0002-secret-prompt-paste-no-truncate.patch` fixes the masked secret
+prompt that **every** `hermes` API-key / token entry goes through
+(`hermes_cli/secret_prompt.py` — the "hidden, can't-see-it" input).
+
+The prompt reads the terminal in raw mode and treated any carriage return or
+newline as **Enter**. When you paste a key that carries a trailing newline (most
+copies do) or one that's wrapped across lines, the embedded newline submitted the
+prompt early — Hermes kept only the text **before** the first newline and the rest
+spilled onto the shell. The key looked "truncated," so you ended up exporting it
+by hand in a script.
+
+The patch turns on the terminal's **bracketed-paste** mode and treats newlines
+that arrive *inside a paste* as part of the secret (flattening them away) rather
+than as Enter, then strips the result. A real Enter keypress still submits. Net
+effect: a pasted key always lands on **one clean line, in full** —
+
+```
+  API key (sk-ant-...): ****************************************   ← whole key captured
+```
+
+No upstream PR yet; it's a candidate to send to `hermes-agent`.
+
+## Fix: API keys no longer corrupted when the agent handles them
+
+`patches/0003-no-redact-tool-call-args.patch` fixes the *other* place keys got
+mangled — not on input, but when the **agent** stores or uses one for you.
+
+Hermes's secret redactor (`agent/redact.py`) was masking the arguments of the
+agent's **own tool calls** before they re-entered conversation history
+(`agent/chat_completion_helpers.py`, `agent/context_compressor.py`). So when the
+agent ran `write_file`, `terminal`, or a Python heredoc with a key in it, the
+*next* turn replayed that call with the key swapped for `***`:
+
+```
+write_file JSON     {"api_key": "sk-or-v1-…"}     →  {"api_key": "***"}        broken JSON
+bash assignment     OPENROUTER_API_KEY=sk-or-…     →  OPENROUTER_API_KEY=***    empty var
+python literal      key = "sk-or-v1-…"             →  key = "sk-or-...6789"     SyntaxError
+```
+
+The model wrote those arguments itself, so masking them in history hides nothing
+from it — it only corrupts the model's view of its own prior call, which is why
+the value came out broken and you ended up scripting around it. The patch keeps
+**tool-call arguments verbatim**. Secret masking of tool **output** (a `cat` of a
+`.env`, command stdout) and of **logs** is untouched, so secrets still don't leak
+into logs or the gateway console.
+
+> Tradeoff: a secret the agent inlines into a tool call now stays in the context
+> that's sent to the model provider on later turns. That's accepted here in
+> exchange for keys that actually work — flip it back with
+> `security.redact_secrets: true` (the default) if you remove this patch.
+
+No upstream PR yet; it's a candidate to send to `hermes-agent`.
+
 ## Repo layout
 
 ```
-patches/    0001-model-picker-billing-tags.patch  + a README on the patch system
+patches/    0001-model-picker-billing-tags.patch
+            0002-secret-prompt-paste-no-truncate.patch
+            0003-no-redact-tool-call-args.patch          + a README on the patch system
 scripts/    apply.sh (idempotent re-applier)  ·  install.sh (wires hooks)
 hooks/      post-merge, post-rewrite           (installed into .git/hooks/)
 docs/       SURVIVE-UPDATES.md                 (the pattern, in depth)
