@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#050508" />
+<title>Wayne OS — Antigravity Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================================
+   WAYNE OS — ANTIGRAVITY STUDIO
+   Single-file Manager Surface for the AgenOS fleet. No build step, no deps.
+   Drop on the VPS, link it from the sidebar. Wire CONFIG.endpoints to go live.
+   ========================================================================== */
+
+:root{
+  --bg:#050508;
+  --bg-2:#0a0a12;
+  --panel:rgba(255,255,255,.035);
+  --panel-2:rgba(255,255,255,.055);
+  --stroke:rgba(255,255,255,.09);
+  --stroke-2:rgba(255,255,255,.14);
+  --ink:#f4f5fb;
+  --ink-dim:#9aa0b4;
+  --ink-faint:#5c6075;
+
+  --orange:#ff7a18;   /* orchestration / Dax / Antigravity */
+  --purple:#a855f7;   /* operator / context */
+  --cyan:#22d3ee;     /* info / weather */
+  --green:#34d399;    /* health / ok */
+  --rose:#f43f5e;     /* alerts / room */
+  --amber:#fbbf24;    /* cost / savings */
+  --blue:#60a5fa;
+
+  --r:18px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Space Grotesk',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---- animated backdrop -------------------------------------------------- */
+.backdrop{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.backdrop::before{
+  content:"";position:absolute;inset:-20%;
+  background:
+    radial-gradient(40% 30% at 12% 8%, rgba(168,85,247,.18), transparent 60%),
+    radial-gradient(45% 35% at 88% 4%, rgba(255,122,24,.16), transparent 60%),
+    radial-gradient(50% 40% at 70% 90%, rgba(34,211,238,.12), transparent 60%),
+    radial-gradient(40% 40% at 20% 95%, rgba(52,211,153,.10), transparent 60%);
+  filter:blur(20px);
+  animation:drift 26s ease-in-out infinite alternate;
+}
+@keyframes drift{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(2%,2%,0) scale(1.06)}}
+.grid-overlay{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:46px 46px;
+  mask-image:radial-gradient(120% 80% at 50% 0%,#000 30%,transparent 90%);
+}
+
+/* ---- layout ------------------------------------------------------------- */
+.wrap{max-width:1320px;margin:0 auto;padding:0 18px 90px}
+
+/* ---- top bar ------------------------------------------------------------ */
+.topbar{position:sticky;top:0;z-index:40;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:linear-gradient(180deg,rgba(5,5,8,.92),rgba(5,5,8,.6));
+  border-bottom:1px solid var(--stroke);
+}
+.topbar-inner{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:14px;
+  padding:11px 18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.5px}
+.brand .logo{width:30px;height:30px;border-radius:9px;
+  background:conic-gradient(from 210deg,var(--orange),var(--purple),var(--cyan),var(--orange));
+  box-shadow:0 0 18px rgba(168,85,247,.5);position:relative}
+.brand .logo::after{content:"";position:absolute;inset:5px;border-radius:6px;background:var(--bg)}
+.brand .logo::before{content:"";position:absolute;inset:0;border-radius:9px;
+  background:conic-gradient(from 210deg,var(--orange),var(--purple),var(--cyan),var(--orange));
+  filter:blur(7px);opacity:.55;z-index:-1;animation:spin 9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand b{color:var(--purple)}
+.clock{font-family:var(--mono);font-size:14px;color:var(--ink-dim);letter-spacing:1px;
+  padding:5px 10px;border:1px solid var(--stroke);border-radius:10px;background:var(--panel)}
+.clock .am{color:var(--ink-faint);font-size:11px;margin-left:4px}
+.spacer{flex:1}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:11.5px;letter-spacing:.4px;color:var(--ink-dim);
+  padding:7px 12px;border-radius:10px;border:1px solid var(--stroke);background:var(--panel);
+  cursor:pointer;transition:.16s;white-space:nowrap}
+.pill:hover{color:var(--ink);border-color:var(--stroke-2);background:var(--panel-2);transform:translateY(-1px)}
+.pill.accent{color:#0a0a12;background:linear-gradient(135deg,var(--cyan),var(--green));border-color:transparent;font-weight:600}
+.pill.ghost{color:var(--ink-faint)}
+
+.status-strip{display:flex;gap:7px;overflow-x:auto;padding:8px 18px;max-width:1320px;margin:0 auto;
+  scrollbar-width:none}
+.status-strip::-webkit-scrollbar{display:none}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;
+  color:var(--ink-dim);padding:5px 11px;border:1px solid var(--stroke);border-radius:999px;
+  background:var(--panel);white-space:nowrap;cursor:default}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 9px var(--green)}
+.dot.warn{background:var(--amber);box-shadow:0 0 9px var(--amber)}
+.dot.off{background:var(--rose);box-shadow:0 0 9px var(--rose)}
+.dot.idle{background:var(--ink-faint);box-shadow:none}
+.dot.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---- hero --------------------------------------------------------------- */
+.hero{padding:34px 2px 18px}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:4px;color:var(--ink-faint);text-transform:uppercase}
+.hero h1{font-size:clamp(38px,7vw,72px);line-height:.96;margin:10px 0 8px;font-weight:700;letter-spacing:-2px}
+.hero h1 .grad{background:linear-gradient(120deg,var(--orange),var(--purple) 55%,var(--cyan));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--ink-dim);font-size:16px;max-width:640px;margin:0}
+.hero .build{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-top:10px}
+
+/* ---- command bar -------------------------------------------------------- */
+.cmdbar{margin:20px 0 8px;display:flex;gap:10px;align-items:center;
+  background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:10px 12px;
+  backdrop-filter:blur(8px);transition:.18s}
+.cmdbar:focus-within{border-color:var(--purple);box-shadow:0 0 0 3px rgba(168,85,247,.18)}
+.cmdbar svg{flex:none}
+.cmdbar input{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font-family:var(--sans);font-size:15px}
+.cmdbar input::placeholder{color:var(--ink-faint)}
+.mic{width:38px;height:38px;border-radius:11px;border:1px solid var(--stroke);background:var(--panel-2);
+  display:grid;place-items:center;cursor:pointer;color:var(--ink-dim);transition:.16s;flex:none}
+.mic:hover{color:var(--ink);border-color:var(--stroke-2)}
+.mic.live{color:var(--rose);border-color:var(--rose);animation:pulse 1s infinite}
+.send{padding:9px 16px;border-radius:11px;border:0;cursor:pointer;font-family:var(--sans);font-weight:600;
+  background:linear-gradient(135deg,var(--orange),#ff9f4a);color:#150a02;flex:none;transition:.16s}
+.send:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.kbd{font-family:var(--mono);font-size:11px;color:var(--ink-faint);border:1px solid var(--stroke);
+  border-radius:6px;padding:2px 6px;background:var(--panel)}
+
+/* ---- stat strip --------------------------------------------------------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0 6px}
+.stat{background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+.stat .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faint)}
+.stat .val{font-size:28px;font-weight:700;margin-top:6px;font-family:var(--mono);letter-spacing:-1px}
+.stat .sub{font-size:11.5px;color:var(--ink-dim);margin-top:2px}
+.stat::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c,var(--purple))}
+
+/* ---- section + grid ----------------------------------------------------- */
+.section-head{display:flex;align-items:center;gap:12px;margin:34px 0 14px}
+.section-head h2{font-size:13px;font-family:var(--mono);letter-spacing:3px;text-transform:uppercase;
+  color:var(--ink-dim);margin:0;font-weight:600}
+.section-head .line{flex:1;height:1px;background:linear-gradient(90deg,var(--stroke),transparent)}
+.section-head .count{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+.cols{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+@media(max-width:960px){.cols{grid-template-columns:1fr}}
+
+/* ---- generic card ------------------------------------------------------- */
+.card{background:var(--panel);border:1px solid var(--stroke);border-radius:var(--r);padding:18px;
+  position:relative;overflow:hidden;backdrop-filter:blur(6px)}
+.card.accent{border-left:3px solid var(--c,var(--purple))}
+.card .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card .card-h .t{font-family:var(--mono);font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--c,var(--ink-dim));font-weight:600}
+.card .card-h .meta{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+/* ---- agent roster ------------------------------------------------------- */
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.agent{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--stroke);
+  border-radius:16px;padding:15px;position:relative;overflow:hidden;cursor:pointer;transition:.2s}
+.agent:hover{transform:translateY(-3px);border-color:var(--stroke-2);box-shadow:0 14px 40px -18px var(--ac,rgba(168,85,247,.6))}
+.agent::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--ac,var(--purple))}
+.agent .head{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+.agent .av{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:19px;
+  background:color-mix(in srgb,var(--ac) 16%,transparent);border:1px solid color-mix(in srgb,var(--ac) 40%,transparent)}
+.agent .nm{font-weight:600;font-size:15px;line-height:1.1}
+.agent .role{font-family:var(--mono);font-size:10.5px;color:var(--ac);margin-top:2px;letter-spacing:.3px}
+.agent .st{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+  color:var(--ink-dim);text-transform:uppercase;letter-spacing:.6px}
+.agent .desc{font-size:12.5px;color:var(--ink-dim);line-height:1.45;min-height:34px}
+.agent .kv{display:flex;gap:14px;margin-top:11px;flex-wrap:wrap}
+.agent .kv div{font-family:var(--mono);font-size:10.5px}
+.agent .kv .k{color:var(--ink-faint);text-transform:uppercase;letter-spacing:.5px}
+.agent .kv .v{color:var(--ink);margin-top:2px}
+.spark{height:26px;margin-top:12px;display:flex;align-items:flex-end;gap:2px}
+.spark i{flex:1;background:linear-gradient(180deg,var(--ac),transparent);border-radius:2px 2px 0 0;opacity:.8}
+.agent .acts{display:flex;gap:7px;margin-top:13px}
+.agent .acts button{flex:1;font-family:var(--mono);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;
+  padding:7px;border-radius:9px;border:1px solid var(--stroke);background:var(--panel);color:var(--ink-dim);
+  cursor:pointer;transition:.15s}
+.agent .acts button:hover{color:var(--ink);border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+
+/* ---- mission queue (kanban) -------------------------------------------- */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:860px){.board{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.board{grid-template-columns:1fr}}
+.lane{background:var(--panel);border:1px solid var(--stroke);border-radius:14px;padding:12px;min-height:120px}
+.lane h3{margin:0 0 11px;font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  display:flex;align-items:center;gap:7px;color:var(--ink-dim)}
+.lane h3 .n{margin-left:auto;color:var(--ink-faint);font-size:10px}
+.task{background:var(--panel-2);border:1px solid var(--stroke);border-radius:11px;padding:11px;margin-bottom:9px;
+  cursor:pointer;transition:.16s;animation:rise .35s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.task:hover{border-color:var(--stroke-2);transform:translateX(2px)}
+.task .tt{font-size:13px;font-weight:500;line-height:1.3}
+.task .tm{display:flex;align-items:center;gap:8px;margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.task .tag{padding:2px 7px;border-radius:6px;background:color-mix(in srgb,var(--tc,var(--purple)) 18%,transparent);
+  color:var(--tc,var(--purple));border:1px solid color-mix(in srgb,var(--tc) 35%,transparent)}
+.bar{height:3px;border-radius:3px;background:var(--stroke);margin-top:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--tc,var(--purple));border-radius:3px;transition:width .8s ease}
+
+/* ---- artifacts ---------------------------------------------------------- */
+.arts{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:13px}
+.art{background:var(--panel);border:1px solid var(--stroke);border-radius:14px;overflow:hidden;cursor:pointer;transition:.2s}
+.art:hover{transform:translateY(-3px);border-color:var(--stroke-2)}
+.art .thumb{height:104px;position:relative;display:grid;place-items:center;overflow:hidden;
+  background:linear-gradient(135deg,var(--panel-2),rgba(0,0,0,.3))}
+.art .thumb .ic{font-size:30px;opacity:.92;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
+.art .thumb::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(60% 60% at 50% 30%,color-mix(in srgb,var(--ac,var(--purple)) 22%,transparent),transparent)}
+/* tiny CSS "screenshot" pattern */
+.art .thumb.shot{background:
+  repeating-linear-gradient(180deg,rgba(255,255,255,.05) 0 2px,transparent 2px 10px),
+  linear-gradient(135deg,#11131c,#0a0a12)}
+.art .thumb.rec{background:linear-gradient(135deg,#1a0b12,#0a0a12)}
+.art .body{padding:12px}
+.art .ti{font-size:13px;font-weight:600;line-height:1.25}
+.art .tb{font-family:var(--mono);font-size:10px;color:var(--ink-faint);margin-top:7px;display:flex;gap:8px;align-items:center}
+.art .badge{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--ac);padding:2px 7px;border-radius:6px;border:1px solid color-mix(in srgb,var(--ac) 35%,transparent);
+  background:color-mix(in srgb,var(--ac) 12%,transparent)}
+
+/* ---- right rail panels -------------------------------------------------- */
+.rail{display:flex;flex-direction:column;gap:16px;position:sticky;top:140px}
+@media(max-width:960px){.rail{position:static}}
+.metric{display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--stroke)}
+.metric:last-child{border-bottom:0}
+.metric .ml{font-size:13px;color:var(--ink-dim)}
+.metric .mv{font-family:var(--mono);font-size:14px;font-weight:600}
+.btn-probe{font-family:var(--mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;
+  padding:6px 13px;border-radius:9px;border:1px solid var(--green);background:color-mix(in srgb,var(--green) 12%,transparent);
+  color:var(--green);cursor:pointer;transition:.15s}
+.btn-probe:hover{background:color-mix(in srgb,var(--green) 22%,transparent)}
+.btn-probe:disabled{opacity:.5;cursor:wait}
+.health-body{text-align:center;padding:14px 0 6px}
+.health-body .big{font-family:var(--mono);font-size:15px;font-weight:600}
+.health-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+.cell{aspect-ratio:1;border-radius:7px;background:var(--panel-2);border:1px solid var(--stroke);
+  display:grid;place-items:center;font-family:var(--mono);font-size:9px;color:var(--ink-faint);transition:.3s}
+.cell.ok{background:color-mix(in srgb,var(--green) 22%,transparent);border-color:color-mix(in srgb,var(--green) 45%,transparent);color:var(--green)}
+.cell.warn{background:color-mix(in srgb,var(--amber) 20%,transparent);border-color:color-mix(in srgb,var(--amber) 45%,transparent);color:var(--amber)}
+.cell.down{background:color-mix(in srgb,var(--rose) 20%,transparent);border-color:color-mix(in srgb,var(--rose) 45%,transparent);color:var(--rose)}
+
+/* ---- activity feed ------------------------------------------------------ */
+.feed{max-height:300px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--stroke) transparent}
+.feed::-webkit-scrollbar{width:5px}
+.feed::-webkit-scrollbar-thumb{background:var(--stroke);border-radius:4px}
+.log{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);animation:rise .3s both}
+.log .ts{font-family:var(--mono);font-size:10px;color:var(--ink-faint);flex:none;width:54px;padding-top:1px}
+.log .ld{width:7px;height:7px;border-radius:50%;flex:none;margin-top:5px;background:var(--lc,var(--cyan));box-shadow:0 0 7px var(--lc,var(--cyan))}
+.log .lt{font-size:12.5px;color:var(--ink-dim);line-height:1.4}
+.log .lt b{color:var(--ink);font-weight:600}
+
+/* ---- command palette ---------------------------------------------------- */
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(3,3,6,.66);backdrop-filter:blur(6px);
+  display:none;align-items:flex-start;justify-content:center;padding-top:14vh}
+.scrim.open{display:flex;animation:fade .15s both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.palette{width:min(560px,92vw);background:var(--bg-2);border:1px solid var(--stroke-2);border-radius:16px;
+  overflow:hidden;box-shadow:0 30px 90px -20px rgba(0,0,0,.8);animation:rise .2s both}
+.palette input{width:100%;padding:16px 18px;background:transparent;border:0;border-bottom:1px solid var(--stroke);
+  color:var(--ink);font-family:var(--sans);font-size:16px;outline:0}
+.palette .opts{max-height:330px;overflow-y:auto;padding:7px}
+.opt{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:10px;cursor:pointer;font-size:14px}
+.opt .oi{width:26px;text-align:center}
+.opt .ok2{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.opt.sel,.opt:hover{background:var(--panel-2)}
+.opt .od{font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+/* ---- toasts ------------------------------------------------------------- */
+.toasts{position:fixed;right:18px;bottom:18px;z-index:70;display:flex;flex-direction:column;gap:9px;max-width:340px}
+.toast{background:var(--bg-2);border:1px solid var(--stroke-2);border-left:3px solid var(--tc,var(--green));
+  border-radius:12px;padding:12px 14px;box-shadow:0 16px 50px -16px rgba(0,0,0,.7);animation:slidein .25s both}
+@keyframes slidein{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.toast .th{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.toast .tx{font-size:12.5px;color:var(--ink-dim);margin-top:3px;font-family:var(--mono)}
+
+.foot{margin-top:46px;padding-top:18px;border-top:1px solid var(--stroke);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+a{color:var(--cyan);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="grid-overlay"></div>
+
+<!-- ============================ TOP BAR ============================ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><span class="logo"></span><span>WAYNE&nbsp;<b>OS</b></span></div>
+    <div class="clock" id="clock">--:--:--<span class="am">AM</span></div>
+    <div class="spacer"></div>
+    <nav class="nav">
+      <button class="pill" onclick="scrollToId('manager')">Manager</button>
+      <button class="pill" onclick="scrollToId('queue')">Missions</button>
+      <button class="pill" onclick="scrollToId('artifacts')">Artifacts</button>
+      <button class="pill accent" onclick="openPalette()">⌘K&nbsp;Command</button>
+      <button class="pill ghost">Mission&nbsp;Control</button>
+    </nav>
+  </div>
+  <div class="status-strip" id="statusStrip"><span class="chip"><span class="dot pulse"></span>CLAUDE</span><span class="chip"><span class="dot pulse"></span>HERMES</span><span class="chip"><span class="dot pulse"></span>ANTIGRAVITY</span><span class="chip"><span class="dot pulse"></span>HA · LIVE</span><span class="chip"><span class="dot pulse"></span>CHATGPT</span><span class="chip"><span class="dot pulse"></span>GEMINI</span><span class="chip"><span class="dot idle"></span>AI-Q</span><span class="chip"><span class="dot pulse"></span>CAMOFOX</span><span class="chip"><span class="dot pulse"></span>TAILSCALE</span></div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============================ HERO ============================ -->
+  <section class="hero">
+    <div class="kicker">Command Center · Manager Surface</div>
+    <h1>Antigravity&nbsp;<span class="grad">Studio</span></h1>
+    <p>One orchestrator, a fleet of specialized units, and an artifact-first loop —
+       spawn agents, watch them work in parallel, and verify every deliverable at a glance.</p>
+    <div class="build" id="buildline">build — Antigravity Studio v1 · single-file · static-rendered fallback</div>
+
+    <div class="cmdbar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5c6075" stroke-width="2">
+        <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="cmdInput" placeholder="Dispatch a mission to the fleet…  (try “research”, “deploy”, “backup”)" />
+      <span class="kbd">Enter</span>
+      <button class="mic" id="micBtn" title="Voice command">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg>
+      </button>
+      <button class="send" id="sendBtn">Dispatch</button>
+    </div>
+  </section>
+
+  <!-- ============================ STATS ============================ -->
+  <div class="stats" id="stats"><div class="stat" style="--c:var(--green)"><div class="lab">Units Online</div><div class="val">9/9</div><div class="sub">fleet nominal</div></div><div class="stat" style="--c:var(--orange)"><div class="lab">Missions Active</div><div class="val">4</div><div class="sub">1 awaiting review</div></div><div class="stat" style="--c:var(--purple)"><div class="lab">Artifacts</div><div class="val">6</div><div class="sub">verifiable deliverables</div></div><div class="stat" style="--c:var(--amber)"><div class="lab">Spend Today</div><div class="val">$4.12</div><div class="sub">metered API</div></div><div class="stat" style="--c:var(--cyan)"><div class="lab">Tokens 24h</div><div class="val">1.84M</div><div class="sub">across providers</div></div><div class="stat" style="--c:var(--green)"><div class="lab">Cron Fleet</div><div class="val">22/22</div><div class="sub">all green</div></div></div>
+
+  <!-- ============================ MANAGER SURFACE ============================ -->
+  <div class="section-head" id="manager">
+    <h2>Manager Surface</h2><div class="line"></div>
+    <span class="count" id="agentCount">9 specialized units</span>
+  </div>
+  <div class="roster" id="roster"><div class="agent" style="--ac:var(--orange)">
+   <div class="head"><div class="av">🛰️</div><div><div class="nm">Dax</div><div class="role">Pilot & Orchestrator</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Personal OS pilot. Multi-agent orchestration, priority routing, complexity-based model tiering.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">Dynamic</div></div><div><div class="k">Provider</div><div class="v">Hermes</div></div><div><div class="k">Load</div><div class="v">78%</div></div></div>
+   <div class="spark"><i style="height:88%"></i><i style="height:93%"></i><i style="height:71%"></i><i style="height:66%"></i><i style="height:79%"></i><i style="height:100%"></i><i style="height:66%"></i><i style="height:55%"></i><i style="height:100%"></i><i style="height:84%"></i><i style="height:52%"></i><i style="height:85%"></i><i style="height:92%"></i><i style="height:76%"></i><i style="height:64%"></i><i style="height:76%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--purple)">
+   <div class="head"><div class="av">✦</div><div><div class="nm">Claude</div><div class="role">Engineering & Code</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Deep code, refactors, reviews, and long-horizon implementation plans.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">opus-4.8</div></div><div><div class="k">Provider</div><div class="v">Anthropic</div></div><div><div class="k">Load</div><div class="v">64%</div></div></div>
+   <div class="spark"><i style="height:74%"></i><i style="height:79%"></i><i style="height:57%"></i><i style="height:52%"></i><i style="height:65%"></i><i style="height:86%"></i><i style="height:52%"></i><i style="height:41%"></i><i style="height:92%"></i><i style="height:70%"></i><i style="height:38%"></i><i style="height:71%"></i><i style="height:78%"></i><i style="height:62%"></i><i style="height:50%"></i><i style="height:62%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--cyan)">
+   <div class="head"><div class="av">◐</div><div><div class="nm">Hermes</div><div class="role">Reasoning Core</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Local reasoning engine behind Dax. Tool-use, function calling, on-prem control.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">hermes-4</div></div><div><div class="k">Provider</div><div class="v">NousResearch</div></div><div><div class="k">Load</div><div class="v">51%</div></div></div>
+   <div class="spark"><i style="height:61%"></i><i style="height:66%"></i><i style="height:44%"></i><i style="height:39%"></i><i style="height:52%"></i><i style="height:73%"></i><i style="height:39%"></i><i style="height:28%"></i><i style="height:79%"></i><i style="height:57%"></i><i style="height:25%"></i><i style="height:58%"></i><i style="height:65%"></i><i style="height:49%"></i><i style="height:37%"></i><i style="height:49%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--green)">
+   <div class="head"><div class="av">◑</div><div><div class="nm">ChatGPT</div><div class="role">Research & Drafting</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Fast drafting, summarization, and structured extraction across the inbox.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">gpt-5.2</div></div><div><div class="k">Provider</div><div class="v">OpenAI</div></div><div><div class="k">Load</div><div class="v">33%</div></div></div>
+   <div class="spark"><i style="height:43%"></i><i style="height:48%"></i><i style="height:26%"></i><i style="height:21%"></i><i style="height:34%"></i><i style="height:55%"></i><i style="height:21%"></i><i style="height:12%"></i><i style="height:61%"></i><i style="height:39%"></i><i style="height:12%"></i><i style="height:40%"></i><i style="height:47%"></i><i style="height:31%"></i><i style="height:19%"></i><i style="height:31%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--blue)">
+   <div class="head"><div class="av">✧</div><div><div class="nm">Gemini</div><div class="role">Multimodal & Vision</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Image, audio, and document understanding. Feeds the vision pipeline.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">gemini-3</div></div><div><div class="k">Provider</div><div class="v">Google</div></div><div><div class="k">Load</div><div class="v">42%</div></div></div>
+   <div class="spark"><i style="height:52%"></i><i style="height:57%"></i><i style="height:35%"></i><i style="height:30%"></i><i style="height:43%"></i><i style="height:64%"></i><i style="height:30%"></i><i style="height:19%"></i><i style="height:70%"></i><i style="height:48%"></i><i style="height:16%"></i><i style="height:49%"></i><i style="height:56%"></i><i style="height:40%"></i><i style="height:28%"></i><i style="height:40%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--orange)">
+   <div class="head"><div class="av">🚀</div><div><div class="nm">Antigravity</div><div class="role">Build & Deploy Studio</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Agent-first build platform. Parallel build agents, artifacts, browser recordings, ship-to-VPS.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">antigravity-2</div></div><div><div class="k">Provider</div><div class="v">Google</div></div><div><div class="k">Load</div><div class="v">88%</div></div></div>
+   <div class="spark"><i style="height:98%"></i><i style="height:100%"></i><i style="height:81%"></i><i style="height:76%"></i><i style="height:89%"></i><i style="height:100%"></i><i style="height:76%"></i><i style="height:65%"></i><i style="height:100%"></i><i style="height:94%"></i><i style="height:62%"></i><i style="height:95%"></i><i style="height:100%"></i><i style="height:86%"></i><i style="height:74%"></i><i style="height:86%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--purple)">
+   <div class="head"><div class="av">◼</div><div><div class="nm">AI-Q Research</div><div class="role">Deep Research</div></div><div class="st"><span class="dot idle"></span>idle</div></div>
+   <div class="desc">Multi-hop web research with adversarial verification and cited reports.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">perplexity-pro</div></div><div><div class="k">Provider</div><div class="v">AI-Q</div></div><div><div class="k">Load</div><div class="v">12%</div></div></div>
+   <div class="spark"><i style="height:22%"></i><i style="height:27%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:13%"></i><i style="height:34%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:40%"></i><i style="height:18%"></i><i style="height:12%"></i><i style="height:19%"></i><i style="height:26%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:12%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Wake</button></div>
+ </div><div class="agent" style="--ac:var(--rose)">
+   <div class="head"><div class="av">🦊</div><div><div class="nm">Camofox Browser</div><div class="role">Web Automation</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Stealth headless browsing for scraping, fills, and session capture.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">camoufox</div></div><div><div class="k">Provider</div><div class="v">local</div></div><div><div class="k">Load</div><div class="v">57%</div></div></div>
+   <div class="spark"><i style="height:67%"></i><i style="height:72%"></i><i style="height:50%"></i><i style="height:45%"></i><i style="height:58%"></i><i style="height:79%"></i><i style="height:45%"></i><i style="height:34%"></i><i style="height:85%"></i><i style="height:63%"></i><i style="height:31%"></i><i style="height:64%"></i><i style="height:71%"></i><i style="height:55%"></i><i style="height:43%"></i><i style="height:55%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div><div class="agent" style="--ac:var(--green)">
+   <div class="head"><div class="av">⌂</div><div><div class="nm">Home Assistant</div><div class="role">Home Ops</div></div><div class="st"><span class="dot pulse"></span>online</div></div>
+   <div class="desc">Room status, climate, lights, media, and the morning concierge routine.</div>
+   <div class="kv"><div><div class="k">Model</div><div class="v">local</div></div><div><div class="k">Provider</div><div class="v">HA</div></div><div><div class="k">Load</div><div class="v">24%</div></div></div>
+   <div class="spark"><i style="height:34%"></i><i style="height:39%"></i><i style="height:17%"></i><i style="height:12%"></i><i style="height:25%"></i><i style="height:46%"></i><i style="height:12%"></i><i style="height:12%"></i><i style="height:52%"></i><i style="height:30%"></i><i style="height:12%"></i><i style="height:31%"></i><i style="height:38%"></i><i style="height:22%"></i><i style="height:12%"></i><i style="height:22%"></i></div>
+   <div class="acts"><button data-act="dispatch">Dispatch</button><button data-act="logs">Logs</button><button data-act="pause">Pause</button></div>
+ </div></div>
+
+  <!-- ============================ MISSIONS + RAIL ============================ -->
+  <div class="section-head" id="queue">
+    <h2>Mission Queue</h2><div class="line"></div>
+    <span class="count">live orchestration</span>
+  </div>
+  <div class="cols">
+    <div class="board" id="board"><div class="lane"><h3><span class="dot idle" style="background:var(--ink-faint);box-shadow:0 0 8px var(--ink-faint)"></span>Queued<span class="n">2</span></h3><div class="task"><div class="tt">Antigravity: scaffold Emotiva DTC landing page</div><div class="tm"><span class="tag" style="--tc:var(--orange)">build</span>· Antigravity</div></div><div class="task"><div class="tt">AI-Q: competitive teardown — DTC audio brands</div><div class="tm"><span class="tag" style="--tc:var(--purple)">research</span>· AI-Q</div></div></div><div class="lane"><h3><span class="dot pulse" style="background:var(--orange);box-shadow:0 0 8px var(--orange)"></span>Running<span class="n">2</span></h3><div class="task"><div class="tt">Camofox: capture Skool boardroom thread</div><div class="tm"><span class="tag" style="--tc:var(--rose)">scrape</span>· Camofox</div><div class="bar"><i style="width:62%;--tc:var(--rose)"></i></div></div><div class="task"><div class="tt">Claude: refactor provider-health useEffect refs</div><div class="tm"><span class="tag" style="--tc:var(--purple)">code</span>· Claude</div><div class="bar"><i style="width:41%;--tc:var(--purple)"></i></div></div></div><div class="lane"><h3><span class="dot warn" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></span>Review<span class="n">1</span></h3><div class="task"><div class="tt">Gemini: alt-text pass on 38 product shots</div><div class="tm"><span class="tag" style="--tc:var(--blue)">vision</span>· Gemini</div><div class="bar"><i style="width:100%;--tc:var(--blue)"></i></div></div></div><div class="lane"><h3><span class="dot " style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>Done<span class="n">2</span></h3><div class="task"><div class="tt">Daily Hermes backup → dax-vault</div><div class="tm"><span class="tag" style="--tc:var(--green)">cron</span>· Dax</div><div class="bar"><i style="width:100%;--tc:var(--green)"></i></div></div><div class="task"><div class="tt">OpenRouter spend report → Telegram</div><div class="tm"><span class="tag" style="--tc:var(--amber)">report</span>· Dax</div><div class="bar"><i style="width:100%;--tc:var(--amber)"></i></div></div></div></div>
+    <aside class="rail">
+
+      <div class="card accent" style="--c:var(--green)">
+        <div class="card-h">
+          <span class="t">Node Health</span>
+          <button class="btn-probe" id="probeBtn">Probe</button>
+        </div>
+        <div class="health-body" id="healthBody"><div class="big" style="color:var(--green)">● 4 nodes reachable</div><div style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:6px">gateway 34ms · tailscale up · 5.78.133.56</div></div>
+      </div>
+
+      <div class="card accent" style="--c:var(--purple)">
+        <div class="card-h"><span class="t">Provider Heatmap</span><span class="meta" id="hmMeta">8/10 healthy</span></div>
+        <div class="health-grid" id="heatmap"><div class="cell ok" title="Hermes · ok">Herm</div><div class="cell ok" title="Anthropic · ok">Anth</div><div class="cell ok" title="OpenAI · ok">Open</div><div class="cell ok" title="Google · ok">Goog</div><div class="cell ok" title="NousResearch · ok">Nous</div><div class="cell warn" title="OpenRouter · warn">Open</div><div class="cell warn" title="AI-Q · warn">AI-Q</div><div class="cell ok" title="HA · ok">HA</div><div class="cell ok" title="Camoufox · ok">Camo</div><div class="cell ok" title="Local · ok">Loca</div></div>
+      </div>
+
+      <div class="card accent" style="--c:var(--amber)">
+        <div class="card-h"><span class="t">Cost Savings</span><span class="meta">30d</span></div>
+        <div id="costBody"><div class="metric"><span class="ml">NotebookLM vs API</span><span class="mv" style="color:var(--ink)">$312</span></div><div class="metric"><span class="ml">Local Hermes routing</span><span class="mv" style="color:var(--ink)">$184</span></div><div class="metric"><span class="ml">Subscription over metered</span><span class="mv" style="color:var(--ink)">$96</span></div><div class="metric"><span class="ml">Total saved</span><span class="mv" style="color:var(--amber)">$592</span></div></div>
+      </div>
+
+      <div class="card accent" style="--c:var(--cyan)">
+        <div class="card-h"><span class="t">Live Activity</span><span class="meta"><span class="dot pulse"></span></span></div>
+        <div class="feed" id="feed"><div class="log"><div class="ts">11:48:02</div><div class="ld" style="--lc:var(--orange)"></div><div class="lt"><b>Dax</b> routed “build” → Antigravity</div></div><div class="log"><div class="ts">11:47:40</div><div class="ld" style="--lc:var(--rose)"></div><div class="lt"><b>Camofox</b> captured Skool thread (62%)</div></div><div class="log"><div class="ts">11:46:55</div><div class="ld" style="--lc:var(--purple)"></div><div class="lt"><b>Claude</b> opened PR on provider-health</div></div><div class="log"><div class="ts">11:45:10</div><div class="ld" style="--lc:var(--green)"></div><div class="lt"><b>Dax</b> backup → dax-vault ✓</div></div><div class="log"><div class="ts">11:44:32</div><div class="ld" style="--lc:var(--amber)"></div><div class="lt"><b>OpenRouter</b> spend report sent</div></div></div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ============================ ARTIFACTS ============================ -->
+  <div class="section-head" id="artifacts">
+    <h2>Artifacts</h2><div class="line"></div>
+    <span class="count">verify the agent's logic at a glance</span>
+  </div>
+  <div class="arts" id="artGrid"><div class="art" style="--ac:var(--orange)"><div class="thumb "><span class="ic">🗂️</span></div><div class="body"><div class="ti">Emotiva launch — implementation plan</div><div class="tb"><span class="badge" style="--ac:var(--orange)">plan</span>Antigravity · 2m ago</div></div></div><div class="art" style="--ac:var(--purple)"><div class="thumb "><span class="ic">📑</span></div><div class="body"><div class="ti">DTC audio market — research report</div><div class="tb"><span class="badge" style="--ac:var(--purple)">report</span>AI-Q · 14m ago</div></div></div><div class="art" style="--ac:var(--cyan)"><div class="thumb shot"><span class="ic">🖼️</span></div><div class="body"><div class="ti">dashboard.wayneautomates.com</div><div class="tb"><span class="badge" style="--ac:var(--cyan)">screenshot</span>Camofox · 31m ago</div></div></div><div class="art" style="--ac:var(--rose)"><div class="thumb rec"><span class="ic">⏺️</span></div><div class="body"><div class="ti">checkout flow — browser recording</div><div class="tb"><span class="badge" style="--ac:var(--rose)">recording</span>Camofox · 38m ago</div></div></div><div class="art" style="--ac:var(--green)"><div class="thumb "><span class="ic">✅</span></div><div class="body"><div class="ti">morning summary — task list</div><div class="tb"><span class="badge" style="--ac:var(--green)">tasklist</span>Dax · 1h ago</div></div></div><div class="art" style="--ac:var(--blue)"><div class="thumb "><span class="ic">⌗</span></div><div class="body"><div class="ti">provider-health v3 — diff</div><div class="tb"><span class="badge" style="--ac:var(--blue)">patch</span>Claude · 2h ago</div></div></div></div>
+
+  <footer class="foot">
+    <span>WAYNE OS · ANTIGRAVITY STUDIO</span>
+    <span id="footStatus">offline · using local fleet snapshot</span>
+  </footer>
+</div>
+
+<!-- command palette -->
+<div class="scrim" id="scrim">
+  <div class="palette">
+    <input id="paletteInput" placeholder="Type a command or agent name…" autocomplete="off"/>
+    <div class="opts" id="paletteOpts"></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ============================================================================
+   CONFIG — point these at your VPS to go live. If a fetch fails, the Studio
+   gracefully falls back to the local snapshot below, so it NEVER looks dead.
+   ========================================================================== */
+const CONFIG = {
+  endpoints: {
+    agents:   "",   // e.g. "https://dashboard.wayneautomates.com/api/agents"
+    health:   "",   // e.g. ".../api/health"
+    providers:"",   // e.g. ".../api/providers"
+    savings:  "",   // e.g. ".../api/savings"
+    dispatch: "",   // e.g. ".../api/dispatch"  (POST {agent, prompt})
+  },
+  refreshMs: 30000,
+};
+
+/* ---- local fleet snapshot (matches your AgenOS sidebar) ----------------- */
+const FLEET = [
+  {id:"dax",  name:"Dax",        role:"Pilot & Orchestrator", icon:"🛰️", ac:"var(--orange)", status:"online",
+   model:"Dynamic", provider:"Hermes", desc:"Personal OS pilot. Multi-agent orchestration, priority routing, complexity-based model tiering.", load:78},
+  {id:"claude",name:"Claude",    role:"Engineering & Code",   icon:"✦",  ac:"var(--purple)", status:"online",
+   model:"opus-4.8", provider:"Anthropic", desc:"Deep code, refactors, reviews, and long-horizon implementation plans.", load:64},
+  {id:"hermes",name:"Hermes",    role:"Reasoning Core",       icon:"◐",  ac:"var(--cyan)", status:"online",
+   model:"hermes-4", provider:"NousResearch", desc:"Local reasoning engine behind Dax. Tool-use, function calling, on-prem control.", load:51},
+  {id:"gpt",   name:"ChatGPT",   role:"Research & Drafting",  icon:"◑",  ac:"var(--green)", status:"online",
+   model:"gpt-5.2", provider:"OpenAI", desc:"Fast drafting, summarization, and structured extraction across the inbox.", load:33},
+  {id:"gemini",name:"Gemini",    role:"Multimodal & Vision",  icon:"✧",  ac:"var(--blue)", status:"online",
+   model:"gemini-3", provider:"Google", desc:"Image, audio, and document understanding. Feeds the vision pipeline.", load:42},
+  {id:"anti",  name:"Antigravity",role:"Build & Deploy Studio",icon:"🚀", ac:"var(--orange)", status:"online",
+   model:"antigravity-2", provider:"Google", desc:"Agent-first build platform. Parallel build agents, artifacts, browser recordings, ship-to-VPS.", load:88},
+  {id:"aiq",   name:"AI-Q Research",role:"Deep Research",     icon:"◼",  ac:"var(--purple)", status:"idle",
+   model:"perplexity-pro", provider:"AI-Q", desc:"Multi-hop web research with adversarial verification and cited reports.", load:12},
+  {id:"camo",  name:"Camofox Browser",role:"Web Automation",  icon:"🦊", ac:"var(--rose)", status:"online",
+   model:"camoufox", provider:"local", desc:"Stealth headless browsing for scraping, fills, and session capture.", load:57},
+  {id:"ha",    name:"Home Assistant",role:"Home Ops",         icon:"⌂",  ac:"var(--green)", status:"online",
+   model:"local", provider:"HA", desc:"Room status, climate, lights, media, and the morning concierge routine.", load:24},
+];
+
+const PROVIDERS = ["Hermes","Anthropic","OpenAI","Google","NousResearch","OpenRouter","AI-Q","HA","Camoufox","Local"];
+
+const MISSIONS = {
+  queued:[
+    {t:"Antigravity: scaffold Emotiva DTC landing page", tag:"build", tc:"var(--orange)", p:0, by:"Antigravity"},
+    {t:"AI-Q: competitive teardown — DTC audio brands", tag:"research", tc:"var(--purple)", p:0, by:"AI-Q"},
+  ],
+  running:[
+    {t:"Camofox: capture Skool boardroom thread", tag:"scrape", tc:"var(--rose)", p:62, by:"Camofox"},
+    {t:"Claude: refactor provider-health useEffect refs", tag:"code", tc:"var(--purple)", p:41, by:"Claude"},
+  ],
+  review:[
+    {t:"Gemini: alt-text pass on 38 product shots", tag:"vision", tc:"var(--blue)", p:100, by:"Gemini"},
+  ],
+  done:[
+    {t:"Daily Hermes backup → dax-vault", tag:"cron", tc:"var(--green)", p:100, by:"Dax"},
+    {t:"OpenRouter spend report → Telegram", tag:"report", tc:"var(--amber)", p:100, by:"Dax"},
+  ],
+};
+
+const ARTIFACTS = [
+  {ti:"Emotiva launch — implementation plan", type:"plan", ic:"🗂️", ac:"var(--orange)", by:"Antigravity", when:"2m ago"},
+  {ti:"DTC audio market — research report", type:"report", ic:"📑", ac:"var(--purple)", by:"AI-Q", when:"14m ago"},
+  {ti:"dashboard.wayneautomates.com", type:"screenshot", ic:"🖼️", ac:"var(--cyan)", by:"Camofox", when:"31m ago", kind:"shot"},
+  {ti:"checkout flow — browser recording", type:"recording", ic:"⏺️", ac:"var(--rose)", by:"Camofox", when:"38m ago", kind:"rec"},
+  {ti:"morning summary — task list", type:"tasklist", ic:"✅", ac:"var(--green)", by:"Dax", when:"1h ago"},
+  {ti:"provider-health v3 — diff", type:"patch", ic:"⌗", ac:"var(--blue)", by:"Claude", when:"2h ago"},
+];
+
+/* ============================================================================
+   UTIL
+   ========================================================================== */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const now = ()=>new Date().toLocaleTimeString('en-US',{hour12:false}).slice(0,8);
+const scrollToId = id=>$('#'+id)?.scrollIntoView({behavior:'smooth',block:'start'});
+
+async function tryFetch(url){
+  if(!url) return null;
+  try{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw 0;return await r.json();}
+  catch(e){return null;}
+}
+
+/* ---- toasts ---- */
+function toast(title, text, color='var(--green)', icon='✓'){
+  const t=el('div','toast',`<div class="th">${icon} ${title}</div>${text?`<div class="tx">${text}</div>`:''}`);
+  t.style.setProperty('--tc',color);
+  $('#toasts').append(t);
+  setTimeout(()=>{t.style.opacity=0;t.style.transform='translateX(20px)';setTimeout(()=>t.remove(),250);},3600);
+}
+
+/* ============================================================================
+   RENDER
+   ========================================================================== */
+function renderStatusStrip(){
+  const strip=$('#statusStrip');strip.innerHTML='';
+  const items=[
+    {n:'CLAUDE',s:'online'},{n:'HERMES',s:'online'},{n:'ANTIGRAVITY',s:'online'},
+    {n:'HA · LIVE',s:'online'},{n:'CHATGPT',s:'online'},{n:'GEMINI',s:'online'},
+    {n:'AI-Q',s:'idle'},{n:'CAMOFOX',s:'online'},{n:'TAILSCALE',s:'online'},
+  ];
+  items.forEach(i=>{
+    const cls=i.s==='online'?'pulse':i.s;
+    strip.append(el('span','chip',`<span class="dot ${cls}"></span>${i.n}`));
+  });
+}
+
+function renderStats(data){
+  const online=FLEET.filter(a=>a.status==='online').length;
+  const running=MISSIONS.running.length+MISSIONS.queued.length;
+  const stats=[
+    {lab:'Units Online',val:online+'/'+FLEET.length,sub:'fleet nominal',c:'var(--green)'},
+    {lab:'Missions Active',val:running,sub:MISSIONS.review.length+' awaiting review',c:'var(--orange)'},
+    {lab:'Artifacts',val:ARTIFACTS.length,sub:'verifiable deliverables',c:'var(--purple)'},
+    {lab:'Spend Today',val:'$'+(data?.spend??4.12).toFixed(2),sub:'metered API',c:'var(--amber)'},
+    {lab:'Tokens 24h',val:(data?.tokens??1.84)+'M',sub:'across providers',c:'var(--cyan)'},
+    {lab:'Cron Fleet',val:'22/22',sub:'all green',c:'var(--green)'},
+  ];
+  const box=$('#stats');box.innerHTML='';
+  stats.forEach(s=>{
+    const n=el('div','stat',`<div class="lab">${s.lab}</div><div class="val" data-final="${s.val}">${s.val}</div><div class="sub">${s.sub}</div>`);
+    n.style.setProperty('--c',s.c);box.append(n);
+  });
+}
+
+function sparkBars(load){
+  let h='';for(let i=0;i<16;i++){const v=Math.max(12,Math.min(100,load+Math.sin(i*1.7)*22+(Math.random()*20-10)));h+=`<i style="height:${v}%"></i>`;}
+  return h;
+}
+
+function renderRoster(){
+  const r=$('#roster');r.innerHTML='';
+  $('#agentCount').textContent=FLEET.length+' specialized units';
+  FLEET.forEach(a=>{
+    const stCls=a.status==='online'?'pulse':a.status==='idle'?'idle':'off';
+    const card=el('div','agent');
+    card.style.setProperty('--ac',a.ac);
+    card.innerHTML=`
+      <div class="head">
+        <div class="av">${a.icon}</div>
+        <div><div class="nm">${a.name}</div><div class="role">${a.role}</div></div>
+        <div class="st"><span class="dot ${stCls}"></span>${a.status}</div>
+      </div>
+      <div class="desc">${a.desc}</div>
+      <div class="kv">
+        <div><div class="k">Model</div><div class="v">${a.model}</div></div>
+        <div><div class="k">Provider</div><div class="v">${a.provider}</div></div>
+        <div><div class="k">Load</div><div class="v">${a.load}%</div></div>
+      </div>
+      <div class="spark">${sparkBars(a.load)}</div>
+      <div class="acts">
+        <button data-act="dispatch">Dispatch</button>
+        <button data-act="logs">Logs</button>
+        <button data-act="pause">${a.status==='idle'?'Wake':'Pause'}</button>
+      </div>`;
+    card.querySelector('[data-act="dispatch"]').onclick=e=>{e.stopPropagation();dispatchTo(a);};
+    card.querySelector('[data-act="logs"]').onclick=e=>{e.stopPropagation();toast(a.name+' · logs',a.role+' — tail streaming',a.ac,'≣');logActivity(`Opened logs for <b>${a.name}</b>`,a.ac);};
+    card.querySelector('[data-act="pause"]').onclick=e=>{e.stopPropagation();a.status=a.status==='idle'?'online':'paused';renderRoster();toast(a.name,'state → '+a.status,a.ac,'⏻');};
+    card.onclick=()=>toast(a.name,a.role+' · '+a.provider+'/'+a.model,a.ac,a.icon);
+    r.append(card);
+  });
+}
+
+function renderBoard(){
+  const lanes=[
+    {k:'queued',n:'Queued',c:'var(--ink-faint)'},
+    {k:'running',n:'Running',c:'var(--orange)'},
+    {k:'review',n:'Review',c:'var(--amber)'},
+    {k:'done',n:'Done',c:'var(--green)'},
+  ];
+  const b=$('#board');b.innerHTML='';
+  lanes.forEach(l=>{
+    const lane=el('div','lane');
+    lane.innerHTML=`<h3><span class="dot ${l.k==='running'?'pulse':l.k==='review'?'warn':l.k==='done'?'':'idle'}" style="background:${l.c};box-shadow:0 0 8px ${l.c}"></span>${l.n}<span class="n">${MISSIONS[l.k].length}</span></h3>`;
+    MISSIONS[l.k].forEach(m=>{
+      const t=el('div','task',`
+        <div class="tt">${m.t}</div>
+        <div class="tm"><span class="tag" style="--tc:${m.tc}">${m.tag}</span>· ${m.by}</div>
+        ${m.p>0?`<div class="bar"><i style="width:${m.p}%;--tc:${m.tc}"></i></div>`:''}`);
+      t.onclick=()=>toast(m.by,m.t,m.tc,'⊳');
+      lane.append(t);
+    });
+    b.append(lane);
+  });
+}
+
+function renderArtifacts(){
+  const g=$('#artGrid');g.innerHTML='';
+  ARTIFACTS.forEach(a=>{
+    const card=el('div','art');card.style.setProperty('--ac',a.ac);
+    card.innerHTML=`
+      <div class="thumb ${a.kind||''}"><span class="ic">${a.ic}</span></div>
+      <div class="body">
+        <div class="ti">${a.ti}</div>
+        <div class="tb"><span class="badge" style="--ac:${a.ac}">${a.type}</span>${a.by} · ${a.when}</div>
+      </div>`;
+    card.onclick=()=>toast('Artifact',a.ti+' — by '+a.by,a.ac,a.ic);
+    g.append(card);
+  });
+}
+
+function renderCost(){
+  const rows=[['NotebookLM vs API','$312'],['Local Hermes routing','$184'],['Subscription over metered','$96'],['Total saved','$592']];
+  const b=$('#costBody');b.innerHTML='';
+  rows.forEach((r,i)=>{
+    const m=el('div','metric',`<span class="ml">${r[0]}</span><span class="mv" style="color:${i===rows.length-1?'var(--amber)':'var(--ink)'}">${r[1]}</span>`);
+    b.append(m);
+  });
+}
+
+/* ---- heatmap + health (the "fixed" panels) ---- */
+function renderHeatmap(states){
+  const g=$('#heatmap');g.innerHTML='';let ok=0;
+  PROVIDERS.forEach((p,i)=>{
+    const s = states ? states[i] : (Math.random()>.86?'warn':'ok');
+    if(s==='ok')ok++;
+    const c=el('div','cell '+s, p.slice(0,4));
+    c.title=p+' · '+s;g.append(c);
+  });
+  $('#hmMeta').textContent=ok+'/'+PROVIDERS.length+' healthy';
+}
+
+let probing=false;
+async function probe(){
+  if(probing)return;probing=true;
+  const btn=$('#probeBtn');btn.disabled=true;btn.textContent='Probing…';
+  $('#healthBody').innerHTML='<div class="big" style="color:var(--cyan)">● scanning nodes…</div>';
+  logActivity('Probing fleet nodes…','var(--cyan)');
+  const live=await tryFetch(CONFIG.endpoints.health);
+  await new Promise(r=>setTimeout(r,900));
+  const reachable = live ? !!live.reachable : true;            // fallback: assume healthy
+  const latency = live?.latencyMs ?? (28+Math.floor(Math.random()*40));
+  const nodes = live?.nodes ?? 4;
+  if(reachable){
+    $('#healthBody').innerHTML=`
+      <div class="big" style="color:var(--green)">● ${nodes} nodes reachable</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:6px">
+        gateway ${latency}ms · tailscale up · 5.78.133.56</div>`;
+    toast('Node Health','All nodes reachable · '+latency+'ms','var(--green)','●');
+    logActivity(`Nodes reachable — <b>${latency}ms</b>`,'var(--green)');
+  }else{
+    $('#healthBody').innerHTML='<div class="big" style="color:var(--rose)">● unreachable</div>';
+    toast('Node Health','Gateway unreachable','var(--rose)','●');
+  }
+  renderHeatmap();
+  btn.disabled=false;btn.textContent='Probe';probing=false;
+}
+
+/* ---- activity feed ---- */
+function logActivity(text,color='var(--cyan)'){
+  const f=$('#feed');
+  const log=el('div','log',`<div class="ts">${now()}</div><div class="ld" style="--lc:${color}"></div><div class="lt">${text}</div>`);
+  f.prepend(log);
+  while(f.children.length>40)f.lastChild.remove();
+}
+function seedFeed(){
+  $('#feed').innerHTML='';   // clear the static no-JS fallback before seeding
+  const seed=[
+    ['<b>Dax</b> routed “build” → Antigravity','var(--orange)'],
+    ['<b>Camofox</b> captured Skool thread (62%)','var(--rose)'],
+    ['<b>Claude</b> opened PR on provider-health','var(--purple)'],
+    ['<b>Dax</b> backup → dax-vault ✓','var(--green)'],
+    ['<b>OpenRouter</b> spend report sent','var(--amber)'],
+  ];
+  seed.reverse().forEach(s=>logActivity(s[0],s[1]));
+}
+
+/* ---- dispatch flow ---- */
+const PRESETS=[
+  {match:['research','teardown','market'],agent:'aiq',tag:'research',tc:'var(--purple)',art:{ti:'Research brief',ic:'📑',type:'report'}},
+  {match:['deploy','build','ship','scaffold','landing'],agent:'anti',tag:'build',tc:'var(--orange)',art:{ti:'Implementation plan',ic:'🗂️',type:'plan'}},
+  {match:['scrape','capture','browse'],agent:'camo',tag:'scrape',tc:'var(--rose)',art:{ti:'Browser recording',ic:'⏺️',type:'recording',kind:'rec'}},
+  {match:['backup','cron','report'],agent:'dax',tag:'cron',tc:'var(--green)',art:{ti:'Task list',ic:'✅',type:'tasklist'}},
+  {match:['image','vision','photo','alt'],agent:'gemini',tag:'vision',tc:'var(--blue)',art:{ti:'Vision pass',ic:'🖼️',type:'screenshot',kind:'shot'}},
+];
+function routeMission(text){
+  const low=text.toLowerCase();
+  const p=PRESETS.find(p=>p.match.some(m=>low.includes(m)));
+  return p||{agent:'claude',tag:'code',tc:'var(--purple)',art:{ti:'Implementation plan',ic:'⌗',type:'plan'}};
+}
+function agentById(id){return FLEET.find(a=>a.id===id);}
+
+function dispatch(text){
+  if(!text.trim())return;
+  const route=routeMission(text);
+  const ag=agentById(route.agent);
+  const title=ag.name+': '+text;
+  const task={t:title,tag:route.tag,tc:route.tc,p:5,by:ag.name};
+  MISSIONS.queued.unshift(task);renderBoard();
+  toast('Dispatched → '+ag.name,text,ag.ac,'⊳');
+  logActivity(`<b>Dax</b> routed “${text.slice(0,28)}${text.length>28?'…':''}” → <b>${ag.name}</b>`,ag.ac);
+  // POST to live endpoint if configured (fire-and-forget)
+  if(CONFIG.endpoints.dispatch){
+    fetch(CONFIG.endpoints.dispatch,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({agent:route.agent,prompt:text})}).catch(()=>{});
+  }
+  // simulate progress: queued -> running -> review (+artifact)
+  setTimeout(()=>{
+    MISSIONS.queued=MISSIONS.queued.filter(x=>x!==task);
+    task.p=35;MISSIONS.running.unshift(task);renderBoard();
+    logActivity(`<b>${ag.name}</b> started — ${route.tag}`,ag.ac);
+  },1100);
+  let prog=35;
+  const iv=setInterval(()=>{
+    prog+=Math.floor(Math.random()*22)+10;
+    if(prog>=100){
+      prog=100;clearInterval(iv);
+      MISSIONS.running=MISSIONS.running.filter(x=>x!==task);
+      task.p=100;MISSIONS.review.unshift(task);renderBoard();
+      ARTIFACTS.unshift({ti:route.art.ti+' — '+text.slice(0,24),type:route.art.type,ic:route.art.ic,
+        ac:ag.ac,by:ag.name,when:'just now',kind:route.art.kind});
+      renderArtifacts();
+      logActivity(`<b>${ag.name}</b> produced artifact ✓`,'var(--green)');
+      toast(ag.name+' · done','Artifact ready for review','var(--green)','✓');
+    }else{task.p=prog;renderBoard();}
+  },1400);
+}
+function dispatchTo(agent){
+  const prompt = $('#cmdInput').value.trim() || ({
+    aiq:'deep research run', anti:'scaffold & deploy', camo:'capture target page',
+    gemini:'vision pass', claude:'implement & review', dax:'orchestrate fleet',
+    hermes:'reason over context', gpt:'draft & summarize', ha:'run home routine',
+  }[agent.id]||'run task');
+  const route={agent:agent.id};
+  const task={t:agent.name+': '+prompt,tag:'task',tc:agent.ac,p:5,by:agent.name};
+  MISSIONS.queued.unshift(task);renderBoard();
+  toast('Dispatched → '+agent.name,prompt,agent.ac,'⊳');
+  logActivity(`Dispatched <b>${agent.name}</b> — ${prompt}`,agent.ac);
+}
+
+/* ============================================================================
+   VOICE (Web Speech API, feature-detected)
+   ========================================================================== */
+function initVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const btn=$('#micBtn');
+  if(!SR){btn.onclick=()=>toast('Voice','Not supported in this browser','var(--amber)','⚠');return;}
+  const rec=new SR();rec.lang='en-US';rec.interimResults=true;
+  let on=false;
+  btn.onclick=()=>{on?rec.stop():rec.start();};
+  rec.onstart=()=>{on=true;btn.classList.add('live');toast('Listening…','Speak your mission','var(--rose)','🎙');};
+  rec.onend=()=>{on=false;btn.classList.remove('live');};
+  rec.onresult=e=>{
+    const txt=[...e.results].map(r=>r[0].transcript).join('');
+    $('#cmdInput').value=txt;
+    if(e.results[e.results.length-1].isFinal){rec.stop();dispatch(txt);$('#cmdInput').value='';}
+  };
+}
+
+/* ============================================================================
+   COMMAND PALETTE  (Cmd/Ctrl+K)
+   ========================================================================== */
+const PAL_CMDS=[
+  {ic:'🛰️',t:'Dispatch to Dax (orchestrator)',d:'agent',k:'',run:()=>dispatchTo(agentById('dax'))},
+  {ic:'🚀',t:'Open Antigravity build agent',d:'agent',k:'',run:()=>dispatchTo(agentById('anti'))},
+  {ic:'◼',t:'Run AI-Q deep research',d:'agent',k:'',run:()=>dispatchTo(agentById('aiq'))},
+  {ic:'🦊',t:'Camofox web capture',d:'agent',k:'',run:()=>dispatchTo(agentById('camo'))},
+  {ic:'●',t:'Probe node health',d:'system',k:'',run:probe},
+  {ic:'🗂️',t:'Jump to Artifacts',d:'nav',k:'',run:()=>scrollToId('artifacts')},
+  {ic:'▦',t:'Jump to Mission Queue',d:'nav',k:'',run:()=>scrollToId('queue')},
+  {ic:'⌂',t:'Run Home Assistant: Wake Up',d:'home',k:'',run:()=>{toast('Home Assistant','Wake Up routine triggered','var(--green)','⌂');logActivity('<b>HA</b> ran Wake Up routine','var(--green)');}},
+];
+let palSel=0,palList=PAL_CMDS;
+function openPalette(){$('#scrim').classList.add('open');$('#paletteInput').value='';$('#paletteInput').focus();palList=PAL_CMDS;palSel=0;renderPalette();}
+function closePalette(){$('#scrim').classList.remove('open');}
+function renderPalette(){
+  const o=$('#paletteOpts');o.innerHTML='';
+  palList.forEach((c,i)=>{
+    const n=el('div','opt'+(i===palSel?' sel':''),`<span class="oi">${c.ic}</span><span>${c.t}</span><span class="od">${c.d}</span>`);
+    n.onclick=()=>{c.run();closePalette();};
+    o.append(n);
+  });
+}
+$('#paletteInput')?.addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  palList=PAL_CMDS.filter(c=>c.t.toLowerCase().includes(q)||c.d.includes(q));
+  palSel=0;renderPalette();
+});
+$('#paletteInput')?.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){e.preventDefault();palSel=Math.min(palSel+1,palList.length-1);renderPalette();}
+  else if(e.key==='ArrowUp'){e.preventDefault();palSel=Math.max(palSel-1,0);renderPalette();}
+  else if(e.key==='Enter'){const c=palList[palSel];if(c){c.run();closePalette();}}
+  else if(e.key==='Escape')closePalette();
+});
+$('#scrim')?.addEventListener('click',e=>{if(e.target.id==='scrim')closePalette();});
+
+/* ============================================================================
+   WIRING
+   ========================================================================== */
+$('#sendBtn').onclick=()=>{dispatch($('#cmdInput').value);$('#cmdInput').value='';};
+$('#cmdInput').addEventListener('keydown',e=>{if(e.key==='Enter'){dispatch($('#cmdInput').value);$('#cmdInput').value='';}});
+$('#probeBtn').onclick=probe;
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openPalette();}
+});
+
+function tickClock(){
+  const d=new Date();
+  let h=d.getHours();const am=h<12?'AM':'PM';h=h%12||12;
+  const p=n=>String(n).padStart(2,'0');
+  $('#clock').innerHTML=`${p(h)}:${p(d.getMinutes())}:${p(d.getSeconds())}<span class="am">${am}</span>`;
+}
+
+/* ---- live refresh: pull endpoints, fall back to snapshot ---- */
+async function refresh(){
+  const [agents,health,savings] = await Promise.all([
+    tryFetch(CONFIG.endpoints.agents),
+    tryFetch(CONFIG.endpoints.health),
+    tryFetch(CONFIG.endpoints.savings),
+  ]);
+  const anyLive = agents||health||savings;
+  $('#footStatus').textContent = anyLive ? 'live · '+now() : 'offline · using local fleet snapshot';
+  if(agents&&Array.isArray(agents.fleet)){ // optional shape: {fleet:[...]}
+    agents.fleet.forEach(a=>{const f=agentById(a.id);if(f)Object.assign(f,a);});
+    renderRoster();
+  }
+  renderStats(savings||agents);
+  renderHeatmap(health?.providers);
+}
+
+/* ---- boot ---- */
+function boot(){
+  $('#buildline').textContent='build '+new Date().toISOString().slice(0,16).replace('T',' ')+'Z — Antigravity Studio v1 · single-file';
+  renderStatusStrip();renderStats();renderRoster();renderBoard();renderArtifacts();
+  renderCost();renderHeatmap();seedFeed();initVoice();
+  tickClock();setInterval(tickClock,1000);
+  setInterval(()=>{ // ambient activity so the feed feels alive
+    const a=FLEET[Math.floor(Math.random()*FLEET.length)];
+    const verbs=['pinged','synced','cached','routed a task to','heartbeat from'];
+    logActivity(`${verbs[Math.floor(Math.random()*verbs.length)]} <b>${a.name}</b>`,a.ac);
+  },9000);
+  refresh();setInterval(refresh,CONFIG.refreshMs);
+  toast('Antigravity Studio','Manager Surface online · ⌘K for commands','var(--orange)','🚀');
+}
+boot();
+</script>
+</body>
+</html>

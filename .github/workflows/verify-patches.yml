@@ -1,0 +1,21 @@
+name: verify-patches
+
+# Catch the day upstream Hermes changes the same lines a patch touches (or
+# upstreams the feature) — so a `hermes update` never silently breaks a patch.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 13 * * 1"   # Mondays 13:00 UTC — weekly drift check against upstream main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dry-run patches against upstream Hermes Agent
+        run: bash scripts/verify-patches.sh

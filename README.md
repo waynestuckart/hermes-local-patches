@@ -54,6 +54,24 @@ Then restart the gateway so the new code loads (Hermes holds code in memory):
 systemctl --user restart hermes-gateway.service   # or however you run it
 ```
 
+## Verify before updating
+
+Before you run `hermes update`, dry-run the patches so you find out *in advance*
+if upstream changed the same lines (or upstreamed the feature):
+
+```bash
+# against your real checkout (non-destructive — --check only):
+HERMES_AGENT_DIR="$HOME/.hermes/hermes-agent" ./scripts/verify-patches.sh
+
+# or against a fresh upstream clone (full check incl. py_compile):
+./scripts/verify-patches.sh
+```
+
+`ALL GOOD — safe to update` means every patch applies clean and the patched
+Python still compiles. This same check runs in CI (push + weekly cron via
+[`.github/workflows/verify-patches.yml`](.github/workflows/verify-patches.yml)),
+so the repo flags drift even when you're not looking.
+
 ## Worked example: billing tags in the `/model` picker
 
 The picker never told you whether a provider bills **metered API credits** or a
