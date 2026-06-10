@@ -561,6 +561,23 @@ input[type="range"] { accent-color: var(--accent); }
         </div>
       </div>
 
+      <!-- Google Takeout Import -->
+      <div class="card">
+        <div class="card-label">📥 Import History</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+          Import up to 2 years of work visits from <strong style="color:var(--text)">Google Maps Timeline</strong>.
+          Go to <strong style="color:var(--accent)">takeout.google.com</strong> → select
+          <em>Location History (Timeline)</em> → Export → unzip → upload the monthly
+          <code style="background:var(--bg3);padding:1px 5px;border-radius:4px">.json</code> files below.
+        </p>
+        <label class="export-row" style="cursor:pointer" for="takeoutInput">
+          <span class="eico">🗺️</span> Import Google Takeout JSON
+          <input type="file" id="takeoutInput" accept=".json" multiple
+            style="display:none" onchange="handleTakeoutFiles(this.files)">
+        </label>
+        <div id="importStatus" style="font-size:12px;color:var(--muted);margin-top:4px;display:none"></div>
+      </div>
+
       <!-- Export -->
       <div class="card">
         <div class="card-label">📤 Export for ADP</div>
@@ -679,22 +696,26 @@ input[type="range"] { accent-color: var(--accent); }
 <div class="toast" id="toast"></div>
 
 <script>
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
 const S = {
-  entries:   [],
-  events:    [],
-  active:    null,
+  entries:   [],     // ADP punch pairs  {id,inTime,outTime,notes,date}
+  events:    [],     // location events  {id,time,type,loc,note,date}
+  active:    null,   // current open clock-in
   settings:  { autoIn:false, autoOut:false, radius:200 },
-  workName:  '',
-  workLoc:   null,
-  homeLoc:   null,
-  pos:       null,
+  workName:  '',     // employer name (e.g. "Emotiva")
+  workLoc:   null,   // { lat, lng, address }
+  homeLoc:   null,   // { lat, lng, address }
+  pos:       null,   // { lat, lng, accuracy }
   filter:    'all',
   histView:  'timeline',
   editId:    null,
   evtEditId: null,
-  _locTarget: 'work',
+  _locTarget: 'work', // which modal is setting location
 };
 
+// ── Persistence ───────────────────────────────────
 function load() {
   try {
     const e  = localStorage.getItem('tg_entries');
@@ -729,8 +750,12 @@ function saveWorkName(v) {
   updateHeaderSub();
 }
 
+// ── ID ────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
+// ══════════════════════════════════════════════════
+//  DATE / TIME HELPERS
+// ══════════════════════════════════════════════════
 const DOW   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS= ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -775,6 +800,9 @@ function lastMonthRange() {
   return {s,e};
 }
 
+// ══════════════════════════════════════════════════
+//  EVENT LOG
+// ══════════════════════════════════════════════════
 const EVT_META = {
   arrive_work: { icon:'🏢', label: () => `Arrived at ${S.workName||'work'}`, adp:'ADP Clock-In',  cls:'ev-arrive-work' },
   depart_work: { icon:'🚗', label: () => `Left ${S.workName||'work'}`,       adp:'ADP Clock-Out', cls:'ev-depart-work' },
@@ -797,6 +825,9 @@ function logEvent(type, extra={}) {
   persistEvts();
 }
 
+// ══════════════════════════════════════════════════
+//  CLOCK IN / OUT
+// ══════════════════════════════════════════════════
 function clockIn(auto=false) {
   if (S.active) { toast('Already clocked in'); return; }
   S.active = {
@@ -825,6 +856,9 @@ function clockOut(auto=false) {
   toast(auto ? '📍 Auto clocked out!' : '✅ Clocked out!');
 }
 
+// ══════════════════════════════════════════════════
+//  DASHBOARD REFRESH
+// ══════════════════════════════════════════════════
 function updateHeaderSub() {
   const sub = document.getElementById('headerSub');
   if (sub) sub.textContent = S.workName ? S.workName : 'ADP Companion';
@@ -862,6 +896,7 @@ function refreshDash() {
     }
   }
 
+  // Hours
   const todayKey = dateKey(now);
   let tH = 0;
   S.entries.filter(e => e.date===todayKey).forEach(e => { tH += hrs(e.inTime, e.outTime); });
@@ -874,6 +909,7 @@ function refreshDash() {
   if (on) wH += (now - new Date(S.active.inTime))/3600000;
   document.getElementById('sWeek').textContent = fmtHrs(wH);
 
+  // Settings sync
   document.getElementById('workNameInput').value = S.workName;
   document.getElementById('workLocDisplay').textContent = S.workLoc
     ? `📍 ${S.workLoc.address || `${S.workLoc.lat.toFixed(5)}, ${S.workLoc.lng.toFixed(5)}`}`
@@ -887,6 +923,7 @@ function refreshDash() {
   document.getElementById('radiusLabel').textContent = S.settings.radius + ' metres';
 }
 
+// Live tick
 setInterval(() => {
   if (!S.active) {
     document.getElementById('clockDisplay').textContent =
@@ -904,6 +941,9 @@ setInterval(() => {
   }
 }, 20000);
 
+// ══════════════════════════════════════════════════
+//  HISTORY — VIEW / FILTER
+// ══════════════════════════════════════════════════
 function setView(v, btn) {
   S.histView = v;
   document.querySelectorAll('.vt-btn').forEach(b => b.classList.remove('active'));
@@ -932,6 +972,7 @@ function renderHist() {
   else renderPunches();
 }
 
+// ── Timeline ──────────────────────────────────────
 function renderTimeline() {
   const el = document.getElementById('histList');
   const evts = [...S.events];
@@ -945,6 +986,7 @@ function renderTimeline() {
     return;
   }
 
+  // Group by date (already sorted newest first)
   const byDay = {};
   evts.forEach(ev => {
     if (!byDay[ev.date]) byDay[ev.date] = [];
@@ -976,6 +1018,7 @@ function renderTimeline() {
   el.innerHTML = html;
 }
 
+// ── Punch Pairs ───────────────────────────────────
 function renderPunches() {
   const el = document.getElementById('histList');
   let list = filteredEntries();
@@ -1036,6 +1079,7 @@ function renderPunches() {
   el.innerHTML = html;
 }
 
+// ── Event edit ────────────────────────────────────
 function openEvtEdit(id) {
   const ev = S.events.find(x=>x.id===id);
   if (!ev) return;
@@ -1077,6 +1121,7 @@ function delEvt(id) {
   toast('🗑️ Event deleted');
 }
 
+// ── Add / Edit punch entry ─────────────────────────
 function openAdd() {
   S.editId = null;
   document.getElementById('editTitle').textContent = 'Add Time Entry';
@@ -1145,6 +1190,9 @@ function closeEdit() {
   S.editId = null;
 }
 
+// ══════════════════════════════════════════════════
+//  MAPS (Leaflet)
+// ══════════════════════════════════════════════════
 let mapMini=null, mapFull=null;
 let mCurM=null,  mCurF=null;
 let mWorkM=null, mWorkF=null;
@@ -1179,6 +1227,7 @@ function updateMapMarkers() {
   if (!mapMini) return;
   const r = S.settings.radius;
 
+  // Current position
   if (S.pos) {
     const ll = [S.pos.lat, S.pos.lng];
     if (mCurM) { mCurM.setLatLng(ll); mCurF.setLatLng(ll); }
@@ -1188,6 +1237,7 @@ function updateMapMarkers() {
     }
   }
 
+  // Work marker + geofence
   if (S.workLoc) {
     const wl = [S.workLoc.lat, S.workLoc.lng];
     const wLabel = S.workLoc.address || (S.workName||'Work');
@@ -1204,6 +1254,7 @@ function updateMapMarkers() {
     }
   }
 
+  // Home marker + geofence
   if (S.homeLoc) {
     const hl = [S.homeLoc.lat, S.homeLoc.lng];
     const hLabel = S.homeLoc.address || 'Home';
@@ -1220,6 +1271,7 @@ function updateMapMarkers() {
     }
   }
 
+  // Pan to fit
   const pts = [];
   if (S.pos)     pts.push([S.pos.lat,S.pos.lng]);
   if (S.workLoc) pts.push([S.workLoc.lat,S.workLoc.lng]);
@@ -1240,7 +1292,8 @@ function refreshMapInfo() {
       const d = geoDistance(S.pos,S.workLoc);
       const inside = d <= S.settings.radius;
       html += `<div>📏 <b>Distance to work:</b> ${d<1000?Math.round(d)+'m':(d/1000).toFixed(2)+'km'}</div>`;
-      html += `<div>⭕ <b>Work geofence:</b> <span style="color:${inside?'var(--green)':'var(--red)'}">${inside?'✔ Inside':'✖ Outside'}</span></div>`;
+      html += `<div>⭕ <b>Work geofence:</b> <span style="color:${inside?'var(--green)':'var(--red)'}">
+        ${inside?'✔ Inside':'✖ Outside'}</span></div>`;
     }
   } else {
     html += `<div style="color:var(--muted)">No work location set — go to Settings.</div>`;
@@ -1249,12 +1302,16 @@ function refreshMapInfo() {
     const d = geoDistance(S.pos,S.homeLoc);
     const inside = d <= S.settings.radius;
     html += `<div>🏠 <b>Distance to home:</b> ${d<1000?Math.round(d)+'m':(d/1000).toFixed(2)+'km'}</div>`;
-    html += `<div>⭕ <b>Home geofence:</b> <span style="color:${inside?'var(--blue)':'var(--muted)'}">${inside?'✔ Inside':'✖ Outside'}</span></div>`;
+    html += `<div>⭕ <b>Home geofence:</b> <span style="color:${inside?'var(--blue)':'var(--muted)'}">
+      ${inside?'✔ Inside':'✖ Outside'}</span></div>`;
   }
   const el = document.getElementById('mapInfoBlock');
   if (el) el.innerHTML = html||'Waiting for GPS…';
 }
 
+// ══════════════════════════════════════════════════
+//  GEOLOCATION — DUAL GEOFENCE
+// ══════════════════════════════════════════════════
 let wasAtWork = false;
 let wasAtHome = false;
 
@@ -1274,6 +1331,7 @@ function onPos(p) {
   const atWork = workDist <= r;
   const atHome = homeDist <= r;
 
+  // Work geofence events
   if (atWork && !wasAtWork) {
     logEvent('arrive_work');
     if (S.settings.autoIn && !S.active) clockIn(true);
@@ -1282,12 +1340,15 @@ function onPos(p) {
     logEvent('depart_work');
     if (S.settings.autoOut && S.active) clockOut(true);
   }
+
+  // Home geofence events
   if (atHome && !wasAtHome) logEvent('arrive_home');
   if (!atHome && wasAtHome) logEvent('depart_home');
 
   wasAtWork = atWork;
   wasAtHome = atHome;
 
+  // Fence status chips
   const fwEl = document.getElementById('fenceWork');
   const fhEl = document.getElementById('fenceHome');
   if (fwEl) {
@@ -1299,6 +1360,7 @@ function onPos(p) {
     else { fhEl.textContent=atHome?'At home':'Away'; fhEl.style.color=atHome?'var(--blue)':'var(--muted)'; }
   }
 
+  // Location bar
   const locEl  = document.getElementById('locBarText');
   const locDot = document.getElementById('locBarDot');
   if (S.workLoc) {
@@ -1315,6 +1377,7 @@ function onPos(p) {
   updateMapMarkers();
   refreshMapInfo();
 
+  // Refresh timeline if visible
   if (document.getElementById('tab-history').classList.contains('active') && S.histView==='timeline') {
     renderTimeline();
   }
@@ -1339,6 +1402,9 @@ function geoDistance(a,b) {
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
+// ══════════════════════════════════════════════════
+//  LOCATION MODAL (shared for work / home)
+// ══════════════════════════════════════════════════
 function openLocModal(target) {
   S._locTarget = target || 'work';
   const title = S._locTarget==='home' ? 'Set Home Location' : 'Set Work Location';
@@ -1379,6 +1445,9 @@ function geocodeAddr() {
   closeLocModal();
 }
 
+// ══════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════
 function setSetting(k,v) { S.settings[k]=v; persistSet(); }
 function onRadius(v) {
   S.settings.radius = parseInt(v);
@@ -1388,12 +1457,15 @@ function onRadius(v) {
   if (mFenceHM&&S.homeLoc) { mFenceHM.setRadius(+v); mFenceHF.setRadius(+v); }
 }
 
+// ══════════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════════
 function exportCSV() {
   let csv = 'Date,Day,Clock In,Clock Out,Hours Worked,Notes\n';
   [...S.entries].reverse().forEach(e=>{
     const d=new Date(e.inTime);
     const h=hrs(e.inTime,e.outTime);
-    csv+=`"${e.date}","${DOW[d.getDay()]}","${fmt12(e.inTime)}","${e.outTime?fmt12(e.outTime):'Active'}","${h.toFixed(2)}","${e.notes||""}"\n`;
+    csv+=`"${e.date}","${DOW[d.getDay()]}","${fmt12(e.inTime)}","${e.outTime?fmt12(e.outTime):'Active'}","${h.toFixed(2)}","${e.notes||''}"\n`;
   });
   dl(csv,'text/csv',`timeguard_${dateKey(new Date())}.csv`);
   toast('📊 CSV downloaded!');
@@ -1406,6 +1478,7 @@ function exportTxt() {
   txt += `Generated: ${new Date().toLocaleString()}\n`;
   txt += '─'.repeat(50)+'\n\n';
 
+  // Group events + punches by date
   const allDates = new Set([
     ...S.events.map(e=>e.date),
     ...S.entries.map(e=>e.date),
@@ -1451,6 +1524,9 @@ function clearAll() {
   toast('🗑️ All records cleared');
 }
 
+// ══════════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════════
 function goTab(name,btn) {
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -1465,6 +1541,9 @@ function overlayClick(e,id) {
     document.getElementById(id).classList.remove('open');
 }
 
+// ══════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════
 let _tt;
 function toast(msg) {
   const el=document.getElementById('toast');
@@ -1472,17 +1551,150 @@ function toast(msg) {
   clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2600);
 }
 
+// ══════════════════════════════════════════════════
+//  SERVICE WORKER
+// ══════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
+// ══════════════════════════════════════════════════
+//  FIRST-RUN DEFAULTS (auto-geocode addresses)
+// ══════════════════════════════════════════════════
+const DEFAULT_WORK_ADDR = '135 SE Pkwy Ct, Franklin, TN 37064';
+const DEFAULT_HOME_ADDR = '7404 Libby Lane, Fairview, TN 37062';
+const DEFAULT_WORK_NAME = 'Emotiva';
+
+async function geocodeAddr_(addr) {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`,
+      {headers:{'Accept-Language':'en'}}
+    );
+    const d = await r.json();
+    if (d && d.length) return {lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon),address:addr};
+  } catch(_) {}
+  return null;
+}
+
+async function setupDefaults() {
+  let changed = false;
+  if (!S.workName) {
+    S.workName = DEFAULT_WORK_NAME;
+    localStorage.setItem('tg_workName', S.workName);
+    updateHeaderSub();
+    document.getElementById('workNameInput').value = S.workName;
+    changed = true;
+  }
+  if (!S.workLoc) {
+    const loc = await geocodeAddr_(DEFAULT_WORK_ADDR);
+    if (loc) { S.workLoc = loc; persistWork(); changed = true; }
+  }
+  if (!S.homeLoc) {
+    const loc = await geocodeAddr_(DEFAULT_HOME_ADDR);
+    if (loc) { S.homeLoc = loc; persistHome(); changed = true; }
+  }
+  if (changed) { refreshDash(); updateMapMarkers(); refreshMapInfo(); }
+}
+
+// ══════════════════════════════════════════════════
+//  GOOGLE TAKEOUT IMPORT
+// ══════════════════════════════════════════════════
+function handleTakeoutFiles(files) {
+  if (!files.length) return;
+  const statusEl = document.getElementById('importStatus');
+  statusEl.style.display = 'block';
+  statusEl.textContent = `Reading ${files.length} file(s)…`;
+
+  let totalImported = 0;
+  let processed = 0;
+
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        totalImported += processTakeout(data);
+      } catch(err) {
+        statusEl.textContent = `Error reading ${file.name}: ${err.message}`;
+      }
+      processed++;
+      if (processed === files.length) {
+        S.entries.sort((a,b)=>new Date(b.inTime)-new Date(a.inTime));
+        S.events.sort((a,b)=>new Date(b.time)-new Date(a.time));
+        persist(); persistEvts();
+        refreshDash(); renderHist();
+        statusEl.textContent = `✅ Imported ${totalImported} visit(s) from ${files.length} file(s)`;
+        toast(`✅ Imported ${totalImported} work/home visits!`);
+        document.getElementById('takeoutInput').value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+function processTakeout(data) {
+  if (!S.workLoc) { toast('Set work location first'); return 0; }
+  const matchR = S.settings.radius * 3; // wider match radius for historical data
+  let count = 0;
+
+  (data.timelineObjects || []).forEach(obj => {
+    if (!obj.placeVisit) return;
+    const pv = obj.placeVisit;
+    if (!pv.location || !pv.duration) return;
+
+    const lat = (pv.location.latitudeE7  || 0) / 1e7;
+    const lng = (pv.location.longitudeE7 || 0) / 1e7;
+    const start = pv.duration.startTimestamp;
+    const end   = pv.duration.endTimestamp;
+    if (!start || !end) return;
+
+    const dWork = geoDistance({lat,lng}, S.workLoc);
+    const dHome = S.homeLoc ? geoDistance({lat,lng}, S.homeLoc) : Infinity;
+
+    if (dWork <= matchR) {
+      // Avoid duplicates (within 5 min of existing entry)
+      const already = S.entries.some(e =>
+        Math.abs(new Date(e.inTime) - new Date(start)) < 300000
+      );
+      if (!already) {
+        S.entries.push({
+          id: uid(), inTime: start, outTime: end,
+          notes: 'Google Takeout import',
+          date: dateKey(start), inLoc: {lat,lng}, outLoc: {lat,lng}
+        });
+        S.events.push({id:uid(), time:start, type:'arrive_work', loc:{lat,lng}, note:'Takeout import', date:dateKey(start)});
+        S.events.push({id:uid(), time:end,   type:'depart_work', loc:{lat,lng}, note:'Takeout import', date:dateKey(end)});
+        count++;
+      }
+    } else if (dHome <= matchR) {
+      const alreadyEvt = S.events.some(e =>
+        e.type==='arrive_home' && Math.abs(new Date(e.time) - new Date(start)) < 300000
+      );
+      if (!alreadyEvt) {
+        S.events.push({id:uid(), time:start, type:'arrive_home', loc:{lat,lng}, note:'Takeout import', date:dateKey(start)});
+        S.events.push({id:uid(), time:end,   type:'depart_home', loc:{lat,lng}, note:'Takeout import', date:dateKey(end)});
+        count++;
+      }
+    }
+  });
+
+  return count;
+}
+
+// ══════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   load();
   updateHeaderSub();
   document.getElementById('clockDate').textContent = fmtDate(new Date());
   refreshDash();
   renderHist();
-  setTimeout(() => { initMaps(); startGeo(); updateMapMarkers(); refreshMapInfo(); }, 250);
+  setTimeout(() => {
+    initMaps(); startGeo(); updateMapMarkers(); refreshMapInfo();
+    setupDefaults();
+  }, 250);
 });
 </script>
 </body>
