@@ -92,6 +92,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 .dot.green  { background: var(--green); }
 .dot.amber  { background: var(--accent); }
 .dot.red    { background: var(--red); }
+.dot.blue   { background: var(--blue); }
 .dot.pulse  { animation: pulse 2s ease-in-out infinite; }
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -179,10 +180,21 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 }
 .loc-bar .dot { margin-top: 3px; }
 
-/* ─── History ─────────────────────────────────────── */
+/* ─── History / Timeline ──────────────────────────── */
 .page-head { margin-bottom: 16px; }
 .page-title { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 2px; }
 .page-sub { font-size: 13px; color: var(--muted); }
+
+.view-toggle {
+  display: flex; gap: 0; background: var(--bg3); border-radius: 10px; padding: 3px;
+  margin-bottom: 12px; border: 1px solid var(--border);
+}
+.vt-btn {
+  flex: 1; padding: 8px 6px; border: none; border-radius: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  cursor: pointer; background: none; color: var(--muted); transition: all .2s;
+}
+.vt-btn.active { background: var(--bg2); color: var(--accent); border: 1px solid var(--border); }
 
 .filter-strip { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 2px; }
 .filter-strip::-webkit-scrollbar { display: none; }
@@ -201,6 +213,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 .summary-bar span { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); font-weight: 700; }
 .summary-bar strong { font-size: 17px; font-weight: 900; color: var(--accent); }
 
+/* punch entries */
 .hist-entry {
   background: var(--bg2); border-radius: 12px; padding: 14px;
   margin-bottom: 8px; border: 1px solid var(--border);
@@ -225,6 +238,42 @@ html, body { height: 100%; background: var(--bg); color: var(--text);
 }
 .icon-btn:hover { color: var(--accent); background: rgba(212,168,67,.12); }
 .icon-btn.del:hover { color: var(--red); background: rgba(255,107,107,.12); }
+
+/* ─── Timeline ────────────────────────────────────── */
+.tl-day-head {
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; padding: 14px 0 8px;
+  border-bottom: 1px solid var(--border); margin-bottom: 4px;
+}
+.tl-event {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid rgba(58,55,80,.4);
+  position: relative;
+}
+.tl-event:last-child { border-bottom: none; }
+.tl-time {
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--muted); min-width: 60px; padding-top: 2px;
+}
+.tl-icon { font-size: 18px; min-width: 26px; text-align: center; }
+.tl-body { flex: 1; min-width: 0; }
+.tl-desc { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.tl-note { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.adp-tag {
+  display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 10px; margin-left: 6px;
+  background: rgba(212,168,67,.15); color: var(--accent); border: 1px solid rgba(212,168,67,.3);
+  vertical-align: middle;
+}
+.tl-actions { display: flex; gap: 4px; align-items: flex-start; padding-top: 2px; }
+
+.ev-arrive-work .tl-desc  { color: var(--green); }
+.ev-depart-work .tl-desc  { color: var(--red); }
+.ev-arrive-home .tl-desc  { color: var(--blue); }
+.ev-depart-home .tl-desc  { color: var(--muted); }
+.ev-clock-in    .tl-desc  { color: var(--green); }
+.ev-clock-out   .tl-desc  { color: var(--red); }
+.ev-manual      .tl-desc  { color: var(--accent); }
 
 .empty-state { text-align: center; padding: 56px 20px; color: var(--muted); }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
@@ -304,6 +353,7 @@ input[type="range"] { accent-color: var(--accent); }
 .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .section-lbl { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
 .link-btn { background: none; border: none; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 </style>
 </head>
 <body>
@@ -315,7 +365,7 @@ input[type="range"] { accent-color: var(--accent); }
       <div class="header-logo">T</div>
       <div>
         <div class="header-name">TimeGuard</div>
-        <div class="header-sub">ADP Companion</div>
+        <div class="header-sub" id="headerSub">ADP Companion</div>
       </div>
     </div>
     <div class="header-right">
@@ -371,10 +421,22 @@ input[type="range"] { accent-color: var(--accent); }
         </div>
       </div>
 
+      <!-- Fence status chips -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div class="stat-card" style="flex:1;padding:10px 12px">
+          <div class="stat-lbl">🏢 Work</div>
+          <div style="font-size:13px;font-weight:700" id="fenceWork">—</div>
+        </div>
+        <div class="stat-card" style="flex:1;padding:10px 12px">
+          <div class="stat-lbl">🏠 Home</div>
+          <div style="font-size:13px;font-weight:700" id="fenceHome">—</div>
+        </div>
+      </div>
+
       <!-- Mini map -->
       <div class="section-head">
         <div class="section-lbl">Location</div>
-        <button class="link-btn" onclick="openLocModal()">Set Work Location</button>
+        <button class="link-btn" onclick="openLocModal('work')">Set Work</button>
       </div>
       <div id="map-mini"></div>
 
@@ -403,15 +465,22 @@ input[type="range"] { accent-color: var(--accent); }
 
     <!-- ■ History ─────────────────────────────────── -->
     <div class="tab-pane" id="tab-history">
-      <div class="section-head" style="margin-bottom:14px">
+      <div class="section-head" style="margin-bottom:10px">
         <div class="page-head" style="margin:0">
           <div class="page-title">History</div>
-          <div class="page-sub">All time records</div>
+          <div class="page-sub" id="histSubTitle">Timeline &amp; ADP records</div>
         </div>
         <button class="btn btn-ghost" style="width:auto;padding:9px 16px;font-size:11px;letter-spacing:1px" onclick="openAdd()">+ ADD</button>
       </div>
 
-      <div class="filter-strip">
+      <!-- View toggle -->
+      <div class="view-toggle">
+        <button class="vt-btn active" id="vtTimeline" onclick="setView('timeline',this)">📅 Timeline</button>
+        <button class="vt-btn" id="vtPunches"  onclick="setView('punches',this)">⏱ ADP Punches</button>
+      </div>
+
+      <!-- Filter chips (punches view only) -->
+      <div class="filter-strip" id="filterStrip" style="display:none">
         <div class="chip active" onclick="setFilter('all',this)">All Time</div>
         <div class="chip" onclick="setFilter('week',this)">This Week</div>
         <div class="chip" onclick="setFilter('month',this)">This Month</div>
@@ -428,14 +497,35 @@ input[type="range"] { accent-color: var(--accent); }
         <div class="page-sub">Tracking &amp; export</div>
       </div>
 
+      <!-- Employer name -->
+      <div class="card">
+        <div class="card-label">🏷️ Employer</div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-lbl">Employer Name</label>
+          <input type="text" class="form-input" id="workNameInput" placeholder="e.g. Emotiva"
+            oninput="saveWorkName(this.value)">
+        </div>
+      </div>
+
+      <!-- Work location -->
       <div class="card">
         <div class="card-label">🏢 Work Location</div>
         <div id="workLocDisplay" style="font-size:13px;color:var(--muted);margin-bottom:12px">
           Not configured
         </div>
-        <button class="btn btn-ghost" style="width:100%" onclick="openLocModal()">Set Work Location</button>
+        <button class="btn btn-ghost" style="width:100%" onclick="openLocModal('work')">Set Work Location</button>
       </div>
 
+      <!-- Home location -->
+      <div class="card">
+        <div class="card-label">🏠 Home Location</div>
+        <div id="homeLocDisplay" style="font-size:13px;color:var(--muted);margin-bottom:12px">
+          Not configured
+        </div>
+        <button class="btn btn-ghost" style="width:100%" onclick="openLocModal('home')">Set Home Location</button>
+      </div>
+
+      <!-- Automation -->
       <div class="card">
         <div class="card-label">⚙️ Automation</div>
 
@@ -471,16 +561,18 @@ input[type="range"] { accent-color: var(--accent); }
         </div>
       </div>
 
+      <!-- Export -->
       <div class="card">
         <div class="card-label">📤 Export for ADP</div>
         <button class="export-row" onclick="exportCSV()">
           <span class="eico">📊</span> Export CSV (Excel / ADP comparison)
         </button>
         <button class="export-row" onclick="exportTxt()">
-          <span class="eico">📄</span> Export Text Report
+          <span class="eico">📄</span> Export Full Timeline Report
         </button>
       </div>
 
+      <!-- Danger -->
       <div class="card">
         <div class="card-label" style="color:var(--red)">⚠️ Danger Zone</div>
         <button class="export-row" style="border-color:rgba(255,107,107,.3);color:var(--red)" onclick="clearAll()">
@@ -513,7 +605,7 @@ input[type="range"] { accent-color: var(--accent); }
 
 </div><!-- /app -->
 
-<!-- ── Edit / Add Modal ─────────────────────────── -->
+<!-- ── Edit / Add Punch Modal ───────────────────── -->
 <div class="overlay" id="editOverlay" onclick="overlayClick(event,'editOverlay')">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -541,17 +633,37 @@ input[type="range"] { accent-color: var(--accent); }
   </div>
 </div>
 
-<!-- ── Work Location Modal ──────────────────────── -->
+<!-- ── Edit Event Modal ──────────────────────────── -->
+<div class="overlay" id="evtEditOverlay" onclick="overlayClick(event,'evtEditOverlay')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit Event</div>
+    <div class="form-group">
+      <label class="form-lbl">Time</label>
+      <input type="time" class="form-input" id="feTime">
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">Note (optional)</label>
+      <input type="text" class="form-input" id="feNote" placeholder="Optional note">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeEvtEdit()">Cancel</button>
+      <button class="btn btn-in"   style="flex:2" onclick="saveEvt()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Location Modal ───────────────────────────── -->
 <div class="overlay" id="locOverlay" onclick="overlayClick(event,'locOverlay')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Set Work Location</div>
+    <div class="modal-title" id="locModalTitle">Set Work Location</div>
     <div class="form-group">
-      <label class="form-lbl">Work Address</label>
+      <label class="form-lbl">Address</label>
       <input type="text" class="form-input" id="fAddr" placeholder="123 Main St, City, State">
     </div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
-      Enter your workplace address <em>or</em> stand at work and tap the GPS button.
+      Enter an address <em>or</em> stand at the location and tap the GPS button.
     </p>
     <button class="btn btn-in" style="width:100%;margin-bottom:10px" onclick="setLocGPS()">
       📍 Use Current GPS Location
@@ -571,35 +683,54 @@ input[type="range"] { accent-color: var(--accent); }
 //  STATE
 // ══════════════════════════════════════════════════
 const S = {
-  entries:     [],
-  active:      null,   // current open clock-in
-  settings:    { autoIn: false, autoOut: false, radius: 200 },
-  workLoc:     null,   // { lat, lng, address }
-  pos:         null,   // { lat, lng, accuracy }
-  filter:      'all',
-  editId:      null,
-  inFence:     false,
+  entries:   [],     // ADP punch pairs  {id,inTime,outTime,notes,date}
+  events:    [],     // location events  {id,time,type,loc,note,date}
+  active:    null,   // current open clock-in
+  settings:  { autoIn:false, autoOut:false, radius:200 },
+  workName:  '',     // employer name (e.g. "Emotiva")
+  workLoc:   null,   // { lat, lng, address }
+  homeLoc:   null,   // { lat, lng, address }
+  pos:       null,   // { lat, lng, accuracy }
+  filter:    'all',
+  histView:  'timeline',
+  editId:    null,
+  evtEditId: null,
+  _locTarget: 'work', // which modal is setting location
 };
 
 // ── Persistence ───────────────────────────────────
 function load() {
   try {
-    const e = localStorage.getItem('tg_entries');
-    const s = localStorage.getItem('tg_settings');
-    const w = localStorage.getItem('tg_work');
-    const a = localStorage.getItem('tg_active');
-    if (e) S.entries  = JSON.parse(e);
-    if (s) S.settings = Object.assign(S.settings, JSON.parse(s));
-    if (w) S.workLoc  = JSON.parse(w);
-    if (a) S.active   = JSON.parse(a);
+    const e  = localStorage.getItem('tg_entries');
+    const ev = localStorage.getItem('tg_events');
+    const s  = localStorage.getItem('tg_settings');
+    const w  = localStorage.getItem('tg_work');
+    const h  = localStorage.getItem('tg_home');
+    const a  = localStorage.getItem('tg_active');
+    const n  = localStorage.getItem('tg_workName');
+    if (e)  S.entries  = JSON.parse(e);
+    if (ev) S.events   = JSON.parse(ev);
+    if (s)  S.settings = Object.assign(S.settings, JSON.parse(s));
+    if (w)  S.workLoc  = JSON.parse(w);
+    if (h)  S.homeLoc  = JSON.parse(h);
+    if (a)  S.active   = JSON.parse(a);
+    if (n)  S.workName = n;
   } catch(_) {}
 }
-function persist()    { localStorage.setItem('tg_entries',  JSON.stringify(S.entries)); }
-function persistSet() { localStorage.setItem('tg_settings', JSON.stringify(S.settings)); }
-function persistWork(){ localStorage.setItem('tg_work',     JSON.stringify(S.workLoc)); }
-function persistAct() {
+
+function persist()     { localStorage.setItem('tg_entries',  JSON.stringify(S.entries)); }
+function persistEvts() { localStorage.setItem('tg_events',   JSON.stringify(S.events)); }
+function persistSet()  { localStorage.setItem('tg_settings', JSON.stringify(S.settings)); }
+function persistWork() { localStorage.setItem('tg_work',     JSON.stringify(S.workLoc)); }
+function persistHome() { localStorage.setItem('tg_home',     JSON.stringify(S.homeLoc)); }
+function persistAct()  {
   if (S.active) localStorage.setItem('tg_active', JSON.stringify(S.active));
   else          localStorage.removeItem('tg_active');
+}
+function saveWorkName(v) {
+  S.workName = v.trim();
+  localStorage.setItem('tg_workName', S.workName);
+  updateHeaderSub();
 }
 
 // ── ID ────────────────────────────────────────────
@@ -622,6 +753,10 @@ function fmt12(iso) {
 function fmtDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+function fmtDateShort(iso) {
+  const d = new Date(iso);
+  return `${DOW[d.getDay()]} ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 function dateKey(iso) {
   const d = new Date(iso);
@@ -649,6 +784,31 @@ function lastMonthRange() {
 }
 
 // ══════════════════════════════════════════════════
+//  EVENT LOG
+// ══════════════════════════════════════════════════
+const EVT_META = {
+  arrive_work: { icon:'🏢', label: () => `Arrived at ${S.workName||'work'}`, adp:'ADP Clock-In',  cls:'ev-arrive-work' },
+  depart_work: { icon:'🚗', label: () => `Left ${S.workName||'work'}`,       adp:'ADP Clock-Out', cls:'ev-depart-work' },
+  arrive_home: { icon:'🏠', label: () => 'Arrived home',                     adp:null,            cls:'ev-arrive-home' },
+  depart_home: { icon:'🚙', label: () => 'Left home',                        adp:null,            cls:'ev-depart-home' },
+  clock_in:    { icon:'✅', label: () => 'Manual clock-in',                  adp:'ADP Clock-In',  cls:'ev-clock-in'    },
+  clock_out:   { icon:'⏹', label: () => 'Manual clock-out',                 adp:'ADP Clock-Out', cls:'ev-clock-out'   },
+};
+
+function logEvent(type, extra={}) {
+  const ev = {
+    id:   uid(),
+    time: new Date().toISOString(),
+    type,
+    loc:  S.pos ? {...S.pos} : null,
+    note: extra.note || '',
+    date: dateKey(new Date()),
+  };
+  S.events.unshift(ev);
+  persistEvts();
+}
+
+// ══════════════════════════════════════════════════
 //  CLOCK IN / OUT
 // ══════════════════════════════════════════════════
 function clockIn(auto=false) {
@@ -659,6 +819,7 @@ function clockIn(auto=false) {
     notes: auto ? 'Auto geo clock-in' : '',
     date: dateKey(new Date()),
   };
+  if (!auto) logEvent('clock_in');
   persistAct();
   refreshDash();
   toast(auto ? '📍 Auto clocked in!' : '✅ Clocked in!');
@@ -671,14 +832,21 @@ function clockOut(auto=false) {
   if (auto) S.active.notes = (S.active.notes ? S.active.notes+' · ' : '')+'Auto geo clock-out';
   S.entries.unshift({...S.active});
   S.active = null;
+  if (!auto) logEvent('clock_out');
   persist(); persistAct();
-  refreshDash(); renderHist();
+  refreshDash();
+  if (document.getElementById('tab-history').classList.contains('active')) renderHist();
   toast(auto ? '📍 Auto clocked out!' : '✅ Clocked out!');
 }
 
 // ══════════════════════════════════════════════════
 //  DASHBOARD REFRESH
 // ══════════════════════════════════════════════════
+function updateHeaderSub() {
+  const sub = document.getElementById('headerSub');
+  if (sub) sub.textContent = S.workName ? S.workName : 'ADP Companion';
+}
+
 function refreshDash() {
   const now = new Date();
   document.getElementById('clockDate').textContent = fmtDate(now);
@@ -725,8 +893,12 @@ function refreshDash() {
   document.getElementById('sWeek').textContent = fmtHrs(wH);
 
   // Settings sync
+  document.getElementById('workNameInput').value = S.workName;
   document.getElementById('workLocDisplay').textContent = S.workLoc
     ? `📍 ${S.workLoc.address || `${S.workLoc.lat.toFixed(5)}, ${S.workLoc.lng.toFixed(5)}`}`
+    : 'Not configured — tap below to set';
+  document.getElementById('homeLocDisplay').textContent = S.homeLoc
+    ? `📍 ${S.homeLoc.address || `${S.homeLoc.lat.toFixed(5)}, ${S.homeLoc.lng.toFixed(5)}`}`
     : 'Not configured — tap below to set';
   document.getElementById('togAutoIn').checked  = S.settings.autoIn;
   document.getElementById('togAutoOut').checked = S.settings.autoOut;
@@ -753,8 +925,16 @@ setInterval(() => {
 }, 20000);
 
 // ══════════════════════════════════════════════════
-//  HISTORY
+//  HISTORY — VIEW / FILTER
 // ══════════════════════════════════════════════════
+function setView(v, btn) {
+  S.histView = v;
+  document.querySelectorAll('.vt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('filterStrip').style.display = (v==='punches') ? 'flex' : 'none';
+  renderHist();
+}
+
 function setFilter(f, el) {
   S.filter = f;
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -771,6 +951,58 @@ function filteredEntries() {
 }
 
 function renderHist() {
+  if (S.histView === 'timeline') renderTimeline();
+  else renderPunches();
+}
+
+// ── Timeline ──────────────────────────────────────
+function renderTimeline() {
+  const el = document.getElementById('histList');
+  const evts = [...S.events];
+
+  if (!evts.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📅</div>
+      <div class="empty-title">No events yet</div>
+      <div class="page-sub">Set your work location and start moving — arrivals &amp; departures will appear here</div>
+    </div>`;
+    return;
+  }
+
+  // Group by date (already sorted newest first)
+  const byDay = {};
+  evts.forEach(ev => {
+    if (!byDay[ev.date]) byDay[ev.date] = [];
+    byDay[ev.date].push(ev);
+  });
+
+  let html = '';
+  Object.keys(byDay).sort((a,b)=>b.localeCompare(a)).forEach(day => {
+    const dayEvts = byDay[day];
+    html += `<div class="tl-day-head">${fmtDateShort(day+'T12:00:00')}</div>`;
+    dayEvts.forEach(ev => {
+      const meta = EVT_META[ev.type] || {icon:'📌', label:()=>ev.type, adp:null, cls:''};
+      const adpBadge = meta.adp ? `<span class="adp-tag">${meta.adp}</span>` : '';
+      html += `<div class="tl-event ${meta.cls}">
+        <div class="tl-time">${fmt12(ev.time)}</div>
+        <div class="tl-icon">${meta.icon}</div>
+        <div class="tl-body">
+          <div class="tl-desc">${meta.label()}${adpBadge}</div>
+          ${ev.note ? `<div class="tl-note">${ev.note}</div>` : ''}
+        </div>
+        <div class="tl-actions">
+          <button class="icon-btn" onclick="openEvtEdit('${ev.id}')" title="Edit">✏️</button>
+          <button class="icon-btn del" onclick="delEvt('${ev.id}')" title="Delete">🗑️</button>
+        </div>
+      </div>`;
+    });
+  });
+
+  el.innerHTML = html;
+}
+
+// ── Punch Pairs ───────────────────────────────────
+function renderPunches() {
   const el = document.getElementById('histList');
   let list = filteredEntries();
   const active = S.active ? [{...S.active, _live:true}] : [];
@@ -830,7 +1062,49 @@ function renderHist() {
   el.innerHTML = html;
 }
 
-// ── Add / Edit entry ──────────────────────────────
+// ── Event edit ────────────────────────────────────
+function openEvtEdit(id) {
+  const ev = S.events.find(x=>x.id===id);
+  if (!ev) return;
+  S.evtEditId = id;
+  const d = new Date(ev.time);
+  document.getElementById('feTime').value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('feNote').value = ev.note || '';
+  document.getElementById('evtEditOverlay').classList.add('open');
+}
+
+function closeEvtEdit() {
+  document.getElementById('evtEditOverlay').classList.remove('open');
+  S.evtEditId = null;
+}
+
+function saveEvt() {
+  const ev = S.events.find(x=>x.id===S.evtEditId);
+  if (!ev) { closeEvtEdit(); return; }
+  const t = document.getElementById('feTime').value;
+  if (t) {
+    const d = new Date(ev.time);
+    const [h,m] = t.split(':').map(Number);
+    d.setHours(h,m,0,0);
+    ev.time = d.toISOString();
+    ev.date = dateKey(d.toISOString());
+  }
+  ev.note = document.getElementById('feNote').value.trim();
+  persistEvts();
+  closeEvtEdit();
+  renderHist();
+  toast('✅ Event updated');
+}
+
+function delEvt(id) {
+  if (!confirm('Delete this event?')) return;
+  S.events = S.events.filter(e=>e.id!==id);
+  persistEvts();
+  renderHist();
+  toast('🗑️ Event deleted');
+}
+
+// ── Add / Edit punch entry ─────────────────────────
 function openAdd() {
   S.editId = null;
   document.getElementById('editTitle').textContent = 'Add Time Entry';
@@ -905,15 +1179,21 @@ function closeEdit() {
 let mapMini=null, mapFull=null;
 let mCurM=null,  mCurF=null;
 let mWorkM=null, mWorkF=null;
-let mFenceM=null,mFenceF=null;
+let mHomeM=null, mHomeF=null;
+let mFenceWM=null, mFenceWF=null;
+let mFenceHM=null, mFenceHF=null;
 
 const dotCurIcon = (size=14) => L.divIcon({
   html:`<div style="width:${size}px;height:${size}px;background:var(--blue);border:2.5px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.6)"></div>`,
   iconSize:[size,size],iconAnchor:[size/2,size/2],className:''
 });
 const dotWorkIcon = () => L.divIcon({
-  html:`<div style="width:26px;height:26px;background:var(--accent);border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:14px">🏢</div>`,
-  iconSize:[26,26],iconAnchor:[13,13],className:''
+  html:`<div style="width:28px;height:28px;background:var(--accent);border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:14px">🏢</div>`,
+  iconSize:[28,28],iconAnchor:[14,14],className:''
+});
+const dotHomeIcon = () => L.divIcon({
+  html:`<div style="width:28px;height:28px;background:var(--blue);border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:14px">🏠</div>`,
+  iconSize:[28,28],iconAnchor:[14,14],className:''
 });
 
 const TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -922,7 +1202,6 @@ const TILE_OPT = {attribution:'© <a href="https://osm.org/copyright">OpenStreet
 function initMaps() {
   mapMini = L.map('map-mini',{zoomControl:true,attributionControl:false,dragging:true}).setView([39,-98],4);
   L.tileLayer(TILES,TILE_OPT).addTo(mapMini);
-
   mapFull = L.map('map-full',{zoomControl:true,attributionControl:true,dragging:true}).setView([39,-98],4);
   L.tileLayer(TILES,TILE_OPT).addTo(mapFull);
 }
@@ -931,6 +1210,7 @@ function updateMapMarkers() {
   if (!mapMini) return;
   const r = S.settings.radius;
 
+  // Current position
   if (S.pos) {
     const ll = [S.pos.lat, S.pos.lng];
     if (mCurM) { mCurM.setLatLng(ll); mCurF.setLatLng(ll); }
@@ -940,28 +1220,47 @@ function updateMapMarkers() {
     }
   }
 
+  // Work marker + geofence
   if (S.workLoc) {
     const wl = [S.workLoc.lat, S.workLoc.lng];
+    const wLabel = S.workLoc.address || (S.workName||'Work');
     if (mWorkM) { mWorkM.setLatLng(wl); mWorkF.setLatLng(wl); }
     else {
-      mWorkM = L.marker(wl,{icon:dotWorkIcon()}).addTo(mapMini).bindPopup(S.workLoc.address||'Work');
-      mWorkF = L.marker(wl,{icon:dotWorkIcon()}).addTo(mapFull).bindPopup(S.workLoc.address||'Work');
+      mWorkM = L.marker(wl,{icon:dotWorkIcon()}).addTo(mapMini).bindPopup(wLabel);
+      mWorkF = L.marker(wl,{icon:dotWorkIcon()}).addTo(mapFull).bindPopup(wLabel);
     }
-    if (mFenceM) { mFenceM.setLatLng(wl).setRadius(r); mFenceF.setLatLng(wl).setRadius(r); }
+    if (mFenceWM) { mFenceWM.setLatLng(wl).setRadius(r); mFenceWF.setLatLng(wl).setRadius(r); }
     else {
-      const fOpt = {radius:r,color:'#d4a843',fillColor:'#d4a843',fillOpacity:.08,weight:1.5,dashArray:'4 6'};
-      mFenceM = L.circle(wl,fOpt).addTo(mapMini);
-      mFenceF = L.circle(wl,{...fOpt,weight:2}).addTo(mapFull);
+      const fOpt={radius:r,color:'#d4a843',fillColor:'#d4a843',fillOpacity:.07,weight:1.5,dashArray:'4 6'};
+      mFenceWM = L.circle(wl,fOpt).addTo(mapMini);
+      mFenceWF = L.circle(wl,{...fOpt,weight:2}).addTo(mapFull);
     }
   }
 
-  // Pan / zoom
-  if (S.pos && S.workLoc) {
-    const b = L.latLngBounds([S.pos.lat,S.pos.lng],[S.workLoc.lat,S.workLoc.lng]);
-    mapMini.fitBounds(b,{padding:[40,40],maxZoom:16});
-  } else if (S.pos) {
-    mapMini.setView([S.pos.lat,S.pos.lng],16);
+  // Home marker + geofence
+  if (S.homeLoc) {
+    const hl = [S.homeLoc.lat, S.homeLoc.lng];
+    const hLabel = S.homeLoc.address || 'Home';
+    if (mHomeM) { mHomeM.setLatLng(hl); mHomeF.setLatLng(hl); }
+    else {
+      mHomeM = L.marker(hl,{icon:dotHomeIcon()}).addTo(mapMini).bindPopup(hLabel);
+      mHomeF = L.marker(hl,{icon:dotHomeIcon()}).addTo(mapFull).bindPopup(hLabel);
+    }
+    if (mFenceHM) { mFenceHM.setLatLng(hl).setRadius(r); mFenceHF.setLatLng(hl).setRadius(r); }
+    else {
+      const fOpt={radius:r,color:'#6b9eff',fillColor:'#6b9eff',fillOpacity:.07,weight:1.5,dashArray:'4 6'};
+      mFenceHM = L.circle(hl,fOpt).addTo(mapMini);
+      mFenceHF = L.circle(hl,{...fOpt,weight:2}).addTo(mapFull);
+    }
   }
+
+  // Pan to fit
+  const pts = [];
+  if (S.pos)     pts.push([S.pos.lat,S.pos.lng]);
+  if (S.workLoc) pts.push([S.workLoc.lat,S.workLoc.lng]);
+  if (S.homeLoc) pts.push([S.homeLoc.lat,S.homeLoc.lng]);
+  if (pts.length>=2) mapMini.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:15});
+  else if (pts.length===1) mapMini.setView(pts[0],16);
 }
 
 function refreshMapInfo() {
@@ -971,31 +1270,36 @@ function refreshMapInfo() {
     html += `<div>🎯 <b>GPS accuracy:</b> ±${Math.round(S.pos.accuracy)} m</div>`;
   }
   if (S.workLoc) {
-    html += `<div>🏢 <b>Work location:</b> ${S.workLoc.address||`${S.workLoc.lat.toFixed(5)}, ${S.workLoc.lng.toFixed(5)}`}</div>`;
+    html += `<div>🏢 <b>${S.workName||'Work'}:</b> ${S.workLoc.address||`${S.workLoc.lat.toFixed(5)}, ${S.workLoc.lng.toFixed(5)}`}</div>`;
     if (S.pos) {
       const d = geoDistance(S.pos,S.workLoc);
       const inside = d <= S.settings.radius;
       html += `<div>📏 <b>Distance to work:</b> ${d<1000?Math.round(d)+'m':(d/1000).toFixed(2)+'km'}</div>`;
-      html += `<div>⭕ <b>Geofence (${S.settings.radius}m):</b> <span style="color:${inside?'var(--green)':'var(--red)'}">
+      html += `<div>⭕ <b>Work geofence:</b> <span style="color:${inside?'var(--green)':'var(--red)'}">
         ${inside?'✔ Inside':'✖ Outside'}</span></div>`;
     }
   } else {
     html += `<div style="color:var(--muted)">No work location set — go to Settings.</div>`;
+  }
+  if (S.homeLoc && S.pos) {
+    const d = geoDistance(S.pos,S.homeLoc);
+    const inside = d <= S.settings.radius;
+    html += `<div>🏠 <b>Distance to home:</b> ${d<1000?Math.round(d)+'m':(d/1000).toFixed(2)+'km'}</div>`;
+    html += `<div>⭕ <b>Home geofence:</b> <span style="color:${inside?'var(--blue)':'var(--muted)'}">
+      ${inside?'✔ Inside':'✖ Outside'}</span></div>`;
   }
   const el = document.getElementById('mapInfoBlock');
   if (el) el.innerHTML = html||'Waiting for GPS…';
 }
 
 // ══════════════════════════════════════════════════
-//  GEOLOCATION
+//  GEOLOCATION — DUAL GEOFENCE
 // ══════════════════════════════════════════════════
-let wasInFence = false;
+let wasAtWork = false;
+let wasAtHome = false;
 
 function startGeo() {
-  if (!navigator.geolocation) {
-    setGpsUI('red','GPS not supported');
-    return;
-  }
+  if (!navigator.geolocation) { setGpsUI('red','GPS not supported'); return; }
   navigator.geolocation.watchPosition(onPos, onGeoErr,
     {enableHighAccuracy:true,timeout:30000,maximumAge:10000});
 }
@@ -1004,21 +1308,49 @@ function onPos(p) {
   S.pos = {lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy};
   setGpsUI('green','GPS Active');
 
-  const d = S.workLoc ? geoDistance(S.pos,S.workLoc) : Infinity;
   const r = S.settings.radius;
-  const inFence = d<=r;
+  const workDist = S.workLoc ? geoDistance(S.pos,S.workLoc) : Infinity;
+  const homeDist = S.homeLoc ? geoDistance(S.pos,S.homeLoc) : Infinity;
+  const atWork = workDist <= r;
+  const atHome = homeDist <= r;
 
-  if (inFence && !wasInFence && S.settings.autoIn && !S.active) clockIn(true);
-  if (!inFence && wasInFence && S.settings.autoOut && S.active)  clockOut(true);
-  wasInFence = inFence;
+  // Work geofence events
+  if (atWork && !wasAtWork) {
+    logEvent('arrive_work');
+    if (S.settings.autoIn && !S.active) clockIn(true);
+  }
+  if (!atWork && wasAtWork) {
+    logEvent('depart_work');
+    if (S.settings.autoOut && S.active) clockOut(true);
+  }
 
-  const locEl = document.getElementById('locBarText');
-  const locDot= document.getElementById('locBarDot');
+  // Home geofence events
+  if (atHome && !wasAtHome) logEvent('arrive_home');
+  if (!atHome && wasAtHome) logEvent('depart_home');
+
+  wasAtWork = atWork;
+  wasAtHome = atHome;
+
+  // Fence status chips
+  const fwEl = document.getElementById('fenceWork');
+  const fhEl = document.getElementById('fenceHome');
+  if (fwEl) {
+    if (!S.workLoc) { fwEl.textContent='Not set'; fwEl.style.color='var(--muted)'; }
+    else { fwEl.textContent=atWork?'At work':'Away'; fwEl.style.color=atWork?'var(--green)':'var(--muted)'; }
+  }
+  if (fhEl) {
+    if (!S.homeLoc) { fhEl.textContent='Not set'; fhEl.style.color='var(--muted)'; }
+    else { fhEl.textContent=atHome?'At home':'Away'; fhEl.style.color=atHome?'var(--blue)':'var(--muted)'; }
+  }
+
+  // Location bar
+  const locEl  = document.getElementById('locBarText');
+  const locDot = document.getElementById('locBarDot');
   if (S.workLoc) {
-    const distStr = d<1000?`${Math.round(d)}m`:`${(d/1000).toFixed(1)}km`;
-    locEl.textContent = `${distStr} from work · ±${Math.round(p.coords.accuracy)}m accuracy`;
-    locEl.style.color = inFence ? 'var(--green)' : 'var(--text)';
-    locDot.className  = 'dot '+(inFence?'green':'amber');
+    const distStr = workDist<1000?`${Math.round(workDist)}m`:`${(workDist/1000).toFixed(1)}km`;
+    locEl.textContent = `${distStr} from ${S.workName||'work'} · ±${Math.round(p.coords.accuracy)}m`;
+    locEl.style.color = atWork ? 'var(--green)' : 'var(--text)';
+    locDot.className  = 'dot '+(atWork?'green':'amber');
   } else {
     locEl.textContent = `${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)} · ±${Math.round(p.coords.accuracy)}m`;
     locEl.style.color = 'var(--text)';
@@ -1027,6 +1359,11 @@ function onPos(p) {
 
   updateMapMarkers();
   refreshMapInfo();
+
+  // Refresh timeline if visible
+  if (document.getElementById('tab-history').classList.contains('active') && S.histView==='timeline') {
+    renderTimeline();
+  }
 }
 
 function onGeoErr() {
@@ -1037,7 +1374,7 @@ function onGeoErr() {
 }
 
 function setGpsUI(state, label) {
-  document.getElementById('gpsDot').className  = 'dot '+(state==='green'?'green':state==='red'?'red':'amber');
+  document.getElementById('gpsDot').className  = state==='green'?'dot green':state==='red'?'dot red':'dot amber';
   document.getElementById('gpsLabel').textContent = label;
 }
 
@@ -1049,19 +1386,25 @@ function geoDistance(a,b) {
 }
 
 // ══════════════════════════════════════════════════
-//  WORK LOCATION MODAL
+//  LOCATION MODAL (shared for work / home)
 // ══════════════════════════════════════════════════
-function openLocModal() {
-  document.getElementById('fAddr').value = S.workLoc?.address||'';
+function openLocModal(target) {
+  S._locTarget = target || 'work';
+  const title = S._locTarget==='home' ? 'Set Home Location' : 'Set Work Location';
+  document.getElementById('locModalTitle').textContent = title;
+  const existing = S._locTarget==='home' ? S.homeLoc : S.workLoc;
+  document.getElementById('fAddr').value = existing?.address || '';
   document.getElementById('locOverlay').classList.add('open');
 }
 function closeLocModal() { document.getElementById('locOverlay').classList.remove('open'); }
 
 function setLocGPS() {
   if (!S.pos) { toast('No GPS fix yet — wait a moment'); return; }
-  S.workLoc = {lat:S.pos.lat,lng:S.pos.lng,address:`${S.pos.lat.toFixed(5)}, ${S.pos.lng.toFixed(5)}`};
-  persistWork(); refreshDash(); updateMapMarkers(); closeLocModal();
-  toast('📍 Work location saved!');
+  const loc = {lat:S.pos.lat, lng:S.pos.lng, address:`${S.pos.lat.toFixed(5)}, ${S.pos.lng.toFixed(5)}`};
+  if (S._locTarget==='home') { S.homeLoc=loc; persistHome(); }
+  else                       { S.workLoc=loc; persistWork(); }
+  refreshDash(); updateMapMarkers(); closeLocModal();
+  toast(`📍 ${S._locTarget==='home'?'Home':'Work'} location saved!`);
 }
 
 function geocodeAddr() {
@@ -1072,9 +1415,11 @@ function geocodeAddr() {
     .then(r=>r.json())
     .then(data => {
       if (data&&data.length) {
-        S.workLoc = {lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon),address:addr};
-        persistWork(); refreshDash(); updateMapMarkers();
-        toast('📍 Work location saved!');
+        const loc = {lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon),address:addr};
+        if (S._locTarget==='home') { S.homeLoc=loc; persistHome(); }
+        else                       { S.workLoc=loc; persistWork(); }
+        refreshDash(); updateMapMarkers();
+        toast(`📍 ${S._locTarget==='home'?'Home':'Work'} location saved!`);
       } else {
         toast('Address not found — try GPS button');
       }
@@ -1091,7 +1436,8 @@ function onRadius(v) {
   S.settings.radius = parseInt(v);
   document.getElementById('radiusLabel').textContent = v+' metres';
   persistSet();
-  if (mFenceM&&S.workLoc) { mFenceM.setRadius(+v); mFenceF.setRadius(+v); }
+  if (mFenceWM&&S.workLoc) { mFenceWM.setRadius(+v); mFenceWF.setRadius(+v); }
+  if (mFenceHM&&S.homeLoc) { mFenceHM.setRadius(+v); mFenceHF.setRadius(+v); }
 }
 
 // ══════════════════════════════════════════════════
@@ -1109,20 +1455,40 @@ function exportCSV() {
 }
 
 function exportTxt() {
-  let txt = `TIMEGUARD — ADP COMPARISON REPORT\nGenerated: ${new Date().toLocaleString()}\n${'─'.repeat(48)}\n\n`;
-  let curDay='', dayH=0;
-  [...S.entries].reverse().forEach(e=>{
-    if (e.date!==curDay) {
-      if (curDay) txt+=`  ── Day total: ${dayH.toFixed(2)} hours\n\n`;
-      txt+=`${fmtDate(e.inTime)}\n${'─'.repeat(32)}\n`;
-      curDay=e.date; dayH=0;
+  const employer = S.workName || 'Work';
+  let txt = `TIMEGUARD — ADP COMPARISON REPORT\n`;
+  txt += `Employer: ${employer}\n`;
+  txt += `Generated: ${new Date().toLocaleString()}\n`;
+  txt += '─'.repeat(50)+'\n\n';
+
+  // Group events + punches by date
+  const allDates = new Set([
+    ...S.events.map(e=>e.date),
+    ...S.entries.map(e=>e.date),
+  ]);
+  const sortedDates = [...allDates].sort((a,b)=>a.localeCompare(b));
+
+  sortedDates.forEach(day => {
+    txt += `${fmtDateShort(day+'T12:00:00')}\n${'─'.repeat(32)}\n`;
+
+    const dayEvts = S.events.filter(e=>e.date===day).sort((a,b)=>new Date(a.time)-new Date(b.time));
+    dayEvts.forEach(ev => {
+      const meta = EVT_META[ev.type] || {icon:'📌',label:()=>ev.type,adp:null};
+      const adp  = meta.adp ? ` [${meta.adp}]` : '';
+      txt += `  ${fmt12(ev.time).padEnd(10)} ${meta.icon} ${meta.label()}${adp}`;
+      if (ev.note) txt += ` (${ev.note})`;
+      txt += '\n';
+    });
+
+    const dayEntries = S.entries.filter(e=>e.date===day).sort((a,b)=>new Date(a.inTime)-new Date(b.inTime));
+    if (dayEntries.length) {
+      let dayH = 0;
+      dayEntries.forEach(e=>{ dayH+=hrs(e.inTime,e.outTime); });
+      txt += `  ── Punch total: ${dayH.toFixed(2)} hours\n`;
     }
-    const h=hrs(e.inTime,e.outTime); dayH+=h;
-    txt+=`  IN: ${fmt12(e.inTime).padEnd(11)}  OUT: ${(e.outTime?fmt12(e.outTime):'Active').padEnd(11)}  (${h.toFixed(2)}h)`;
-    if (e.notes) txt+=`  [${e.notes}]`;
-    txt+='\n';
+    txt += '\n';
   });
-  if (curDay) txt+=`  ── Day total: ${dayH.toFixed(2)} hours\n`;
+
   dl(txt,'text/plain',`timeguard_report_${dateKey(new Date())}.txt`);
   toast('📄 Report downloaded!');
 }
@@ -1134,9 +1500,10 @@ function dl(content,type,filename) {
 }
 
 function clearAll() {
-  if (!confirm('Delete ALL time records permanently?')) return;
-  S.entries=[]; S.active=null;
-  persist(); persistAct(); renderHist(); refreshDash();
+  if (!confirm('Delete ALL time records and events permanently?')) return;
+  S.entries=[]; S.events=[]; S.active=null;
+  persist(); persistEvts(); persistAct();
+  renderHist(); refreshDash();
   toast('🗑️ All records cleared');
 }
 
@@ -1153,9 +1520,8 @@ function goTab(name,btn) {
 }
 
 function overlayClick(e,id) {
-  if (e.target===document.getElementById(id)) {
+  if (e.target===document.getElementById(id))
     document.getElementById(id).classList.remove('open');
-  }
 }
 
 // ══════════════════════════════════════════════════
@@ -1180,6 +1546,7 @@ if ('serviceWorker' in navigator) {
 // ══════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   load();
+  updateHeaderSub();
   document.getElementById('clockDate').textContent = fmtDate(new Date());
   refreshDash();
   renderHist();
