@@ -354,6 +354,54 @@ input[type="range"] { accent-color: var(--accent); }
 .section-lbl { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
 .link-btn { background: none; border: none; color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ─── Week Chart ──────────────────────────────────── */
+.week-chart { display:flex; gap:4px; align-items:flex-end; height:72px; margin-bottom:8px; }
+.wc-day { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.wc-bar-wrap { flex:1; width:100%; background:var(--bg3); border-radius:4px; display:flex; flex-direction:column-reverse; overflow:hidden; }
+.wc-bar { width:100%; min-height:2px; }
+.wc-bar.ok    { background:var(--green); }
+.wc-bar.warn  { background:var(--accent); }
+.wc-bar.short { background:var(--red); }
+.wc-lbl { font-size:9px; color:var(--muted); }
+.wc-hrs { font-size:9px; font-weight:700; color:var(--text); min-height:12px; }
+
+/* ─── ADP Discrepancy ────────────────────────────── */
+.adp-compare { background:var(--bg3); border-radius:8px; padding:8px 10px; margin-top:6px; font-size:11px; }
+.adp-compare-row { display:flex; align-items:center; gap:6px; margin-bottom:3px; flex-wrap:wrap; }
+.adp-compare-row:last-child { margin-bottom:0; }
+.adp-src { font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); min-width:50px; }
+.adp-time-adp { color:var(--blue); font-weight:700; font-variant-numeric:tabular-nums; }
+.adp-time-gps { color:var(--green); font-weight:700; font-variant-numeric:tabular-nums; }
+.disc-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; margin-left:auto; white-space:nowrap; }
+.disc-badge.ok   { background:rgba(76,222,128,.15);  color:var(--green); }
+.disc-badge.warn { background:rgba(212,168,67,.15);  color:var(--accent); }
+.disc-badge.err  { background:rgba(255,107,107,.15); color:var(--red); }
+.disc-badge.miss { color:var(--red); font-style:italic; margin-left:auto; }
+
+/* ─── Schedule badges ────────────────────────────── */
+.sch-badge { display:inline-flex; align-items:center; font-size:10px; font-weight:700;
+  padding:2px 7px; border-radius:10px; margin-right:4px; }
+.sch-badge.late  { background:rgba(255,107,107,.15); color:var(--red); }
+.sch-badge.early { background:rgba(212,168,67,.15);  color:var(--accent); }
+.sch-badge.good  { background:rgba(76,222,128,.15);  color:var(--green); }
+
+/* ─── Period Summary ─────────────────────────────── */
+.period-summary { background:rgba(212,168,67,.07); border:1px solid rgba(212,168,67,.2);
+  border-radius:10px; padding:10px 14px; margin-bottom:10px; }
+.ps-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+.ps-row:last-child { margin-bottom:0; }
+.ps-lbl { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+.ps-val { font-size:14px; font-weight:800; }
+
+/* ─── Schedule Grid ──────────────────────────────── */
+.sch-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); }
+.sch-row:last-child { border-bottom:none; }
+.sch-dow { font-size:12px; font-weight:700; min-width:32px; }
+.sch-times { display:flex; gap:8px; flex:1; }
+.sch-input { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+  padding:7px 8px; color:var(--text); font-size:13px; outline:none; -webkit-appearance:none; }
+.sch-input:focus { border-color:var(--accent); }
 </style>
 </head>
 <body>
@@ -433,6 +481,19 @@ input[type="range"] { accent-color: var(--accent); }
         </div>
       </div>
 
+      <!-- Week Chart -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-label">📊 This Week
+          <span id="weekChartTotal" style="font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;text-transform:none;letter-spacing:0"></span>
+        </div>
+        <div class="week-chart" id="weekChart"></div>
+        <div style="display:flex;justify-content:center;gap:14px;font-size:10px;color:var(--muted)">
+          <span><span style="color:var(--green)">■</span> On track</span>
+          <span><span style="color:var(--accent)">■</span> Short</span>
+          <span><span style="color:var(--red)">■</span> Missed</span>
+        </div>
+      </div>
+
       <!-- Mini map -->
       <div class="section-head">
         <div class="section-lbl">Location</div>
@@ -470,7 +531,10 @@ input[type="range"] { accent-color: var(--accent); }
           <div class="page-title">History</div>
           <div class="page-sub" id="histSubTitle">Timeline &amp; ADP records</div>
         </div>
-        <button class="btn btn-ghost" style="width:auto;padding:9px 16px;font-size:11px;letter-spacing:1px" onclick="openAdd()">+ ADD</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" style="width:auto;padding:9px 13px;font-size:11px;letter-spacing:1px" onclick="openLogEvent()">📅 Log</button>
+          <button class="btn btn-ghost" style="width:auto;padding:9px 13px;font-size:11px;letter-spacing:1px" onclick="openAdd()">+ ADD</button>
+        </div>
       </div>
 
       <!-- View toggle -->
@@ -482,10 +546,14 @@ input[type="range"] { accent-color: var(--accent); }
       <!-- Filter chips (punches view only) -->
       <div class="filter-strip" id="filterStrip" style="display:none">
         <div class="chip active" onclick="setFilter('all',this)">All Time</div>
+        <div class="chip" onclick="setFilter('period',this)">This Period</div>
+        <div class="chip" onclick="setFilter('lastperiod',this)">Last Period</div>
         <div class="chip" onclick="setFilter('week',this)">This Week</div>
         <div class="chip" onclick="setFilter('month',this)">This Month</div>
-        <div class="chip" onclick="setFilter('last',this)">Last Month</div>
       </div>
+
+      <!-- Pay period summary panel -->
+      <div class="period-summary" id="periodSummary" style="display:none"></div>
 
       <div id="histList"></div>
     </div>
@@ -558,6 +626,66 @@ input[type="range"] { accent-color: var(--accent); }
           </div>
           <input type="range" min="50" max="600" step="25" value="200" id="radiusSlider"
             style="width:110px" oninput="onRadius(this.value)">
+        </div>
+      </div>
+
+      <!-- Pay Period -->
+      <div class="card">
+        <div class="card-label">📅 Pay Period</div>
+        <div class="form-group">
+          <label class="form-lbl">Reference Start Date</label>
+          <input type="date" class="form-input" id="payRefInput" onchange="savePayRef(this.value)">
+        </div>
+        <div class="set-row" style="padding-top:4px">
+          <div class="set-info">
+            <div class="set-name">Bi-Weekly Periods</div>
+            <div class="set-desc" id="payPeriodDesc">Set a reference date above</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="togBiweekly" checked onchange="savePayLen(this.checked?14:7)">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Work Schedule -->
+      <div class="card">
+        <div class="card-label">🕐 Work Schedule</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Expected in/out times used for schedule comparison badges</p>
+        <div class="sch-row">
+          <div class="sch-dow">Mon</div>
+          <div class="sch-times">
+            <input type="time" class="sch-input" id="schIn1" value="08:00" onchange="saveSch(1,'in',this.value)">
+            <input type="time" class="sch-input" id="schOut1" value="17:00" onchange="saveSch(1,'out',this.value)">
+          </div>
+        </div>
+        <div class="sch-row">
+          <div class="sch-dow">Tue</div>
+          <div class="sch-times">
+            <input type="time" class="sch-input" id="schIn2" value="08:00" onchange="saveSch(2,'in',this.value)">
+            <input type="time" class="sch-input" id="schOut2" value="17:00" onchange="saveSch(2,'out',this.value)">
+          </div>
+        </div>
+        <div class="sch-row">
+          <div class="sch-dow">Wed</div>
+          <div class="sch-times">
+            <input type="time" class="sch-input" id="schIn3" value="08:00" onchange="saveSch(3,'in',this.value)">
+            <input type="time" class="sch-input" id="schOut3" value="17:00" onchange="saveSch(3,'out',this.value)">
+          </div>
+        </div>
+        <div class="sch-row">
+          <div class="sch-dow">Thu</div>
+          <div class="sch-times">
+            <input type="time" class="sch-input" id="schIn4" value="08:00" onchange="saveSch(4,'in',this.value)">
+            <input type="time" class="sch-input" id="schOut4" value="17:00" onchange="saveSch(4,'out',this.value)">
+          </div>
+        </div>
+        <div class="sch-row">
+          <div class="sch-dow">Fri</div>
+          <div class="sch-times">
+            <input type="time" class="sch-input" id="schIn5" value="08:00" onchange="saveSch(5,'in',this.value)">
+            <input type="time" class="sch-input" id="schOut5" value="17:00" onchange="saveSch(5,'out',this.value)">
+          </div>
         </div>
       </div>
 
@@ -643,6 +771,19 @@ input[type="range"] { accent-color: var(--accent); }
       <label class="form-lbl">Notes (optional)</label>
       <input type="text" class="form-input" id="fNotes" placeholder="e.g. ADP missed punch">
     </div>
+    <div style="background:rgba(107,158,255,.07);border:1px solid rgba(107,158,255,.2);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:10px">ADP App Times (optional — for discrepancy tracking)</div>
+      <div class="two-col">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-lbl">ADP In</label>
+          <input type="time" class="form-input" id="fAdpIn">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-lbl">ADP Out</label>
+          <input type="time" class="form-input" id="fAdpOut">
+        </div>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-ghost" style="flex:1" onclick="closeEdit()">Cancel</button>
       <button class="btn btn-in"   style="flex:2" onclick="saveEntry()">Save Entry</button>
@@ -692,6 +833,41 @@ input[type="range"] { accent-color: var(--accent); }
   </div>
 </div>
 
+<!-- ── Log Past Event Modal ─────────────────────── -->
+<div class="overlay" id="logEvtOverlay" onclick="overlayClick(event,'logEvtOverlay')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Log Past Event</div>
+    <div class="form-group">
+      <label class="form-lbl">Event Type</label>
+      <select class="form-input" id="leType">
+        <option value="arrive_work">🏢 Arrived at work</option>
+        <option value="depart_work">🚗 Left work</option>
+        <option value="arrive_home">🏠 Arrived home</option>
+        <option value="depart_home">🚙 Left home</option>
+        <option value="clock_in">✅ Manual clock-in</option>
+        <option value="clock_out">⏹ Manual clock-out</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">Date</label>
+      <input type="date" class="form-input" id="leDate">
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">Time</label>
+      <input type="time" class="form-input" id="leTime">
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">Note (optional)</label>
+      <input type="text" class="form-input" id="leNote" placeholder="e.g. Forgot to log this morning">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeLogEvent()">Cancel</button>
+      <button class="btn btn-in"   style="flex:2" onclick="saveLogEvent()">Log Event</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Toast ────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
@@ -700,19 +876,28 @@ input[type="range"] { accent-color: var(--accent); }
 //  STATE
 // ══════════════════════════════════════════════════
 const S = {
-  entries:   [],     // ADP punch pairs  {id,inTime,outTime,notes,date}
-  events:    [],     // location events  {id,time,type,loc,note,date}
-  active:    null,   // current open clock-in
-  settings:  { autoIn:false, autoOut:false, radius:200 },
-  workName:  '',     // employer name (e.g. "Emotiva")
-  workLoc:   null,   // { lat, lng, address }
-  homeLoc:   null,   // { lat, lng, address }
-  pos:       null,   // { lat, lng, accuracy }
-  filter:    'all',
-  histView:  'timeline',
-  editId:    null,
-  evtEditId: null,
-  _locTarget: 'work', // which modal is setting location
+  entries:      [],     // ADP punch pairs  {id,inTime,outTime,notes,date,adpIn,adpOut}
+  events:       [],     // location events  {id,time,type,loc,note,date}
+  active:       null,   // current open clock-in
+  settings:     { autoIn:false, autoOut:false, radius:200 },
+  workName:     '',     // employer name (e.g. "Emotiva")
+  workLoc:      null,   // { lat, lng, address }
+  homeLoc:      null,   // { lat, lng, address }
+  pos:          null,   // { lat, lng, accuracy }
+  filter:       'all',
+  histView:     'timeline',
+  editId:       null,
+  evtEditId:    null,
+  _locTarget:   'work',
+  payPeriodRef: null,   // 'YYYY-MM-DD' reference start for pay periods
+  payPeriodLen: 14,     // 7=weekly, 14=bi-weekly
+  schedule: {           // weekday expected hours (0=Sun,6=Sat)
+    1: {in:'08:00', out:'17:00'},
+    2: {in:'08:00', out:'17:00'},
+    3: {in:'08:00', out:'17:00'},
+    4: {in:'08:00', out:'17:00'},
+    5: {in:'08:00', out:'17:00'},
+  },
 };
 
 // ── Persistence ───────────────────────────────────
@@ -725,13 +910,19 @@ function load() {
     const h  = localStorage.getItem('tg_home');
     const a  = localStorage.getItem('tg_active');
     const n  = localStorage.getItem('tg_workName');
-    if (e)  S.entries  = JSON.parse(e);
-    if (ev) S.events   = JSON.parse(ev);
-    if (s)  S.settings = Object.assign(S.settings, JSON.parse(s));
-    if (w)  S.workLoc  = JSON.parse(w);
-    if (h)  S.homeLoc  = JSON.parse(h);
-    if (a)  S.active   = JSON.parse(a);
-    if (n)  S.workName = n;
+    const pr = localStorage.getItem('tg_payref');
+    const pl = localStorage.getItem('tg_paylen');
+    const sc = localStorage.getItem('tg_schedule');
+    if (e)  S.entries      = JSON.parse(e);
+    if (ev) S.events       = JSON.parse(ev);
+    if (s)  S.settings     = Object.assign(S.settings, JSON.parse(s));
+    if (w)  S.workLoc      = JSON.parse(w);
+    if (h)  S.homeLoc      = JSON.parse(h);
+    if (a)  S.active       = JSON.parse(a);
+    if (n)  S.workName     = n;
+    if (pr) S.payPeriodRef = pr;
+    if (pl) S.payPeriodLen = parseInt(pl);
+    if (sc) S.schedule     = Object.assign(S.schedule, JSON.parse(sc));
   } catch(_) {}
 }
 
@@ -744,6 +935,27 @@ function persistAct()  {
   if (S.active) localStorage.setItem('tg_active', JSON.stringify(S.active));
   else          localStorage.removeItem('tg_active');
 }
+function persistPayRef()  { if(S.payPeriodRef) localStorage.setItem('tg_payref',S.payPeriodRef); else localStorage.removeItem('tg_payref'); }
+function persistPayLen()  { localStorage.setItem('tg_paylen', S.payPeriodLen); }
+function persistSch()     { localStorage.setItem('tg_schedule', JSON.stringify(S.schedule)); }
+
+function savePayRef(v) {
+  S.payPeriodRef = v || null;
+  persistPayRef();
+  updatePayPeriodDesc();
+}
+function savePayLen(days) {
+  S.payPeriodLen = days;
+  persistPayLen();
+  updatePayPeriodDesc();
+}
+function saveSch(dow, field, val) {
+  if (!S.schedule[dow]) S.schedule[dow] = {};
+  S.schedule[dow][field] = val;
+  persistSch();
+  renderWeekChart();
+}
+
 function saveWorkName(v) {
   S.workName = v.trim();
   localStorage.setItem('tg_workName', S.workName);
@@ -798,6 +1010,183 @@ function lastMonthRange() {
   const s = new Date(); s.setMonth(s.getMonth()-1,1); s.setHours(0,0,0,0);
   const e = new Date(); e.setDate(0); e.setHours(23,59,59,999);
   return {s,e};
+}
+
+// ══════════════════════════════════════════════════
+//  PAY PERIOD / SCHEDULE HELPERS
+// ══════════════════════════════════════════════════
+function scheduleHrsForDay(dow) {
+  const sch = S.schedule[dow];
+  if (!sch || !sch.in || !sch.out) return 0;
+  const [ih, im] = sch.in.split(':').map(Number);
+  const [oh, om] = sch.out.split(':').map(Number);
+  return ((oh * 60 + om) - (ih * 60 + im)) / 60;
+}
+
+function getPayPeriod(offset) {
+  if (!S.payPeriodRef) return null;
+  const refD = new Date(S.payPeriodRef + 'T00:00:00');
+  const now  = new Date();
+  const diff = Math.floor((now - refD) / 86400000);
+  const n    = Math.floor(diff / S.payPeriodLen) + offset;
+  const s    = new Date(refD);
+  s.setDate(s.getDate() + n * S.payPeriodLen);
+  s.setHours(0,0,0,0);
+  const e = new Date(s);
+  e.setDate(e.getDate() + S.payPeriodLen - 1);
+  e.setHours(23,59,59,999);
+  return {s, e};
+}
+function currentPayPeriod() { return getPayPeriod(0); }
+function lastPayPeriod()    { return getPayPeriod(-1); }
+
+function fmtPeriodDate(d) {
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function updatePayPeriodDesc() {
+  const el = document.getElementById('payPeriodDesc');
+  if (!el) return;
+  if (!S.payPeriodRef) { el.textContent = 'Set a reference date above'; return; }
+  const pp = currentPayPeriod();
+  if (!pp) return;
+  el.textContent = `Current: ${fmtPeriodDate(pp.s)} – ${fmtPeriodDate(pp.e)}`;
+}
+
+function renderWeekChart() {
+  const el      = document.getElementById('weekChart');
+  const totalEl = document.getElementById('weekChartTotal');
+  if (!el) return;
+
+  const now      = new Date();
+  const todayDow = now.getDay();
+  const monOff   = todayDow === 0 ? -6 : 1 - todayDow;
+  const mon      = new Date(now);
+  mon.setDate(mon.getDate() + monOff);
+  mon.setHours(0,0,0,0);
+
+  const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dows   = [1,2,3,4,5,6,0];
+
+  let maxSch = 0;
+  dows.forEach(d => { const h = scheduleHrsForDay(d); if (h > maxSch) maxSch = h; });
+  if (maxSch < 4) maxSch = 8;
+
+  let weekTotal = 0;
+  let bars = '';
+
+  for (let i = 0; i < 7; i++) {
+    const dayDate  = new Date(mon);
+    dayDate.setDate(mon.getDate() + i);
+    const dk       = `${dayDate.getFullYear()}-${String(dayDate.getMonth()+1).padStart(2,'0')}-${String(dayDate.getDate()).padStart(2,'0')}`;
+    const dow      = dows[i];
+    const schH     = scheduleHrsForDay(dow);
+    const isToday  = dateKey(now.toISOString()) === dk;
+    const isFuture = dayDate > now;
+
+    let actualH = 0;
+    S.entries.filter(e => e.date === dk).forEach(e => { actualH += hrs(e.inTime, e.outTime); });
+    if (isToday && S.active) actualH += (now - new Date(S.active.inTime)) / 3600000;
+    weekTotal += actualH;
+
+    const pct = Math.min(actualH / maxSch, 1) * 100;
+    let cls = '';
+    if (actualH > 0) {
+      cls = (schH === 0 || actualH >= schH * 0.95) ? 'ok' : (actualH >= schH * 0.5 ? 'warn' : 'short');
+    } else if (!isFuture && schH > 0) {
+      cls = 'short';
+    }
+
+    const hrsLbl = actualH > 0.05 ? actualH.toFixed(1) : (isFuture ? '' : (schH > 0 ? '0.0' : ''));
+    bars += `<div class="wc-day">
+      <div class="wc-hrs">${hrsLbl}</div>
+      <div class="wc-bar-wrap">
+        <div class="wc-bar ${cls}" style="height:${pct}%"></div>
+      </div>
+      <div class="wc-lbl" style="color:${isToday?'var(--accent)':'var(--muted)'};font-weight:${isToday?'800':'400'}">${labels[i]}</div>
+    </div>`;
+  }
+
+  el.innerHTML = bars;
+  if (totalEl) totalEl.textContent = weekTotal > 0.05 ? `${weekTotal.toFixed(1)}h this week` : '';
+}
+
+function schBadgesForEntry(entry) {
+  if (!entry.inTime) return '';
+  const d   = new Date(entry.inTime);
+  const dow = d.getDay();
+  const sch = S.schedule[dow];
+  if (!sch || !sch.in) return '';
+
+  let badges = '';
+  const [sih, sim] = sch.in.split(':').map(Number);
+  const schInMins  = sih * 60 + sim;
+  const actInMins  = d.getHours() * 60 + d.getMinutes();
+  const lateMins   = actInMins - schInMins;
+
+  if      (lateMins > 5)  badges += `<span class="sch-badge late">Late ${lateMins}m</span>`;
+  else if (lateMins < -5) badges += `<span class="sch-badge good">Early ${-lateMins}m</span>`;
+
+  if (entry.outTime && sch.out) {
+    const [soh, som] = sch.out.split(':').map(Number);
+    const schOutMins = soh * 60 + som;
+    const od         = new Date(entry.outTime);
+    const actOutMins = od.getHours() * 60 + od.getMinutes();
+    const earlyMins  = schOutMins - actOutMins;
+    if (earlyMins > 5) badges += `<span class="sch-badge early">Left ${earlyMins}m early</span>`;
+  }
+  return badges;
+}
+
+function buildAdpCompare(entry) {
+  if (entry._live || (!entry.adpIn && !entry.adpOut)) return '';
+  const base = new Date(entry.inTime);
+  let html = '<div class="adp-compare">';
+
+  const mkRow = (label, adpTime, gpsIso) => {
+    if (!adpTime) return '';
+    const [ah, am] = adpTime.split(':').map(Number);
+    const adpD = new Date(base);
+    adpD.setHours(ah, am, 0, 0);
+    if (gpsIso && adpD > new Date(gpsIso)) adpD.setDate(adpD.getDate() - 1);
+    if (gpsIso) {
+      const diffMins = Math.round((new Date(gpsIso) - adpD) / 60000);
+      const cls = Math.abs(diffMins) <= 2 ? 'ok' : Math.abs(diffMins) <= 10 ? 'warn' : 'err';
+      const txt = diffMins === 0 ? 'Match' : (diffMins > 0 ? `GPS +${diffMins}m` : `GPS ${diffMins}m`);
+      return `<div class="adp-compare-row">
+        <span class="adp-src">${label}</span>
+        <span class="adp-time-adp">ADP ${fmt12(adpD.toISOString())}</span>
+        <span style="color:var(--muted)">vs</span>
+        <span class="adp-time-gps">GPS ${fmt12(gpsIso)}</span>
+        <span class="disc-badge ${cls}">${txt}</span>
+      </div>`;
+    } else {
+      return `<div class="adp-compare-row">
+        <span class="adp-src">${label}</span>
+        <span class="adp-time-adp">ADP ${fmt12(adpD.toISOString())}</span>
+        <span class="disc-badge miss">GPS missing</span>
+      </div>`;
+    }
+  };
+
+  if (entry.adpIn)  html += mkRow('In',  entry.adpIn,  entry.inTime);
+  if (entry.adpOut) html += mkRow('Out', entry.adpOut, entry.outTime);
+  html += '</div>';
+  return html;
+}
+
+function syncSettingsUI() {
+  const payRefEl = document.getElementById('payRefInput');
+  if (payRefEl) payRefEl.value = S.payPeriodRef || '';
+  const togBwEl = document.getElementById('togBiweekly');
+  if (togBwEl) togBwEl.checked = S.payPeriodLen === 14;
+  updatePayPeriodDesc();
+  for (let d = 1; d <= 5; d++) {
+    const inEl  = document.getElementById(`schIn${d}`);
+    const outEl = document.getElementById(`schOut${d}`);
+    if (inEl  && S.schedule[d]) inEl.value  = S.schedule[d].in  || '08:00';
+    if (outEl && S.schedule[d]) outEl.value = S.schedule[d].out || '17:00';
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -921,6 +1310,7 @@ function refreshDash() {
   document.getElementById('togAutoOut').checked = S.settings.autoOut;
   document.getElementById('radiusSlider').value  = S.settings.radius;
   document.getElementById('radiusLabel').textContent = S.settings.radius + ' metres';
+  renderWeekChart();
 }
 
 // Live tick
@@ -960,10 +1350,12 @@ function setFilter(f, el) {
 }
 
 function filteredEntries() {
-  if (S.filter==='all')   return [...S.entries];
-  if (S.filter==='week')  return S.entries.filter(e => new Date(e.inTime)>=weekStart());
-  if (S.filter==='month') return S.entries.filter(e => new Date(e.inTime)>=monthStart());
-  if (S.filter==='last')  { const {s,e}=lastMonthRange(); return S.entries.filter(x=>new Date(x.inTime)>=s&&new Date(x.inTime)<=e); }
+  if (S.filter==='all')        return [...S.entries];
+  if (S.filter==='week')       return S.entries.filter(e => new Date(e.inTime)>=weekStart());
+  if (S.filter==='month')      return S.entries.filter(e => new Date(e.inTime)>=monthStart());
+  if (S.filter==='last')       { const {s,e}=lastMonthRange(); return S.entries.filter(x=>new Date(x.inTime)>=s&&new Date(x.inTime)<=e); }
+  if (S.filter==='period')     { const pp=currentPayPeriod(); if(pp) return S.entries.filter(x=>new Date(x.inTime)>=pp.s&&new Date(x.inTime)<=pp.e); return [...S.entries]; }
+  if (S.filter==='lastperiod') { const pp=lastPayPeriod();    if(pp) return S.entries.filter(x=>new Date(x.inTime)>=pp.s&&new Date(x.inTime)<=pp.e); return [...S.entries]; }
   return [...S.entries];
 }
 
@@ -1033,46 +1425,81 @@ function renderPunches() {
   let totalH = 0;
   list.forEach(e => { totalH += hrs(e.inTime,e.outTime); });
 
+  // Pay period summary panel
+  const pSumEl = document.getElementById('periodSummary');
+  if (pSumEl) {
+    if (S.filter === 'period' || S.filter === 'lastperiod') {
+      const pp = S.filter === 'period' ? currentPayPeriod() : lastPayPeriod();
+      if (pp) {
+        let schTotal = 0;
+        const cur = new Date(pp.s);
+        while (cur <= pp.e) { schTotal += scheduleHrsForDay(cur.getDay()); cur.setDate(cur.getDate()+1); }
+        const diff    = totalH - schTotal;
+        const diffStr = diff >= 0 ? `+${diff.toFixed(1)}h` : `${diff.toFixed(1)}h`;
+        const diffClr = diff >= 0 ? 'var(--green)' : 'var(--red)';
+        pSumEl.style.display = 'block';
+        pSumEl.innerHTML = `
+          <div class="ps-row"><span class="ps-lbl">Period</span><span class="ps-val">${fmtPeriodDate(pp.s)} – ${fmtPeriodDate(pp.e)}</span></div>
+          <div class="ps-row"><span class="ps-lbl">GPS Hours</span><span class="ps-val">${fmtHrs(totalH)}</span></div>
+          ${schTotal>0?`<div class="ps-row"><span class="ps-lbl">Scheduled</span><span class="ps-val">${fmtHrs(schTotal)}</span></div>
+          <div class="ps-row"><span class="ps-lbl">Variance</span><span class="ps-val" style="color:${diffClr}">${diffStr}</span></div>`:''}
+        `;
+      } else {
+        pSumEl.style.display = 'none';
+        pSumEl.innerHTML = '';
+      }
+    } else {
+      pSumEl.style.display = 'none';
+      pSumEl.innerHTML = '';
+    }
+  }
+
   let html = `<div class="summary-bar">
     <span>${list.length} completed record${list.length!==1?'s':''}</span>
     <strong>${fmtHrs(totalH)}</strong>
   </div>`;
 
   all.forEach(entry => {
-    const d = new Date(entry.inTime);
-    const h = entry.outTime ? hrs(entry.inTime,entry.outTime) : null;
-    html += `<div class="hist-entry">
-      <div class="hist-date">
-        <div class="hist-month">${MONTHS[d.getMonth()]}</div>
-        <div class="hist-day">${d.getDate()}</div>
-        <div class="hist-dow">${DOW[d.getDay()]}</div>
-      </div>
-      <div class="hist-divider"></div>
-      <div class="hist-body">
-        <div class="hist-times">
-          <div class="time-col">
-            <span class="time-lbl">In</span>
-            <span class="time-val" style="color:var(--green)">${fmt12(entry.inTime)}</span>
-          </div>
-          <div class="time-col">
-            <span class="time-lbl">Out</span>
-            <span class="time-val" style="color:${entry._live?'var(--accent)':'var(--red)'}">
-              ${entry._live ? 'Active' : fmt12(entry.outTime)}
-            </span>
-          </div>
+    const d          = new Date(entry.inTime);
+    const h          = entry.outTime ? hrs(entry.inTime,entry.outTime) : null;
+    const schBadges  = entry._live ? '' : schBadgesForEntry(entry);
+    const adpBlock   = buildAdpCompare(entry);
+    html += `<div class="hist-entry" style="flex-direction:column;align-items:stretch;gap:0">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="hist-date">
+          <div class="hist-month">${MONTHS[d.getMonth()]}</div>
+          <div class="hist-day">${d.getDate()}</div>
+          <div class="hist-dow">${DOW[d.getDay()]}</div>
         </div>
-        <div class="hist-meta">
-          ${h!==null ? fmtHrs(h)+' worked' : '<span style="color:var(--accent);font-weight:700">In progress…</span>'}
-          ${entry.notes ? ' · '+entry.notes : ''}
+        <div class="hist-divider"></div>
+        <div class="hist-body">
+          <div class="hist-times">
+            <div class="time-col">
+              <span class="time-lbl">GPS In</span>
+              <span class="time-val" style="color:var(--green)">${fmt12(entry.inTime)}</span>
+            </div>
+            <div class="time-col">
+              <span class="time-lbl">GPS Out</span>
+              <span class="time-val" style="color:${entry._live?'var(--accent)':'var(--red)'}">
+                ${entry._live ? 'Active' : fmt12(entry.outTime)}
+              </span>
+            </div>
+          </div>
+          <div class="hist-meta">
+            ${h!==null ? fmtHrs(h)+' worked' : '<span style="color:var(--accent);font-weight:700">In progress…</span>'}
+            ${entry.notes ? ' · '+entry.notes : ''}
+          </div>
+          ${schBadges ? `<div style="margin-top:4px">${schBadges}</div>` : ''}
+        </div>
+        <div class="hist-actions">
+          ${entry._live
+            ? `<button class="icon-btn del" onclick="clockOut()" title="Clock Out">⏹</button>`
+            : `<button class="icon-btn" onclick="openEdit('${entry.id}')" title="Edit">✏️</button>
+               <button class="icon-btn del" onclick="delEntry('${entry.id}')" title="Delete">🗑️</button>`
+          }
         </div>
       </div>
-      <div class="hist-actions">
-        ${entry._live
-          ? `<button class="icon-btn del" onclick="clockOut()" title="Clock Out">⏹</button>`
-          : `<button class="icon-btn" onclick="openEdit('${entry.id}')" title="Edit">✏️</button>
-             <button class="icon-btn del" onclick="delEntry('${entry.id}')" title="Delete">🗑️</button>`
-        }
-      </div>
+      ${adpBlock}
     </div>`;
   });
 
@@ -1129,6 +1556,8 @@ function openAdd() {
   document.getElementById('fIn').value    = '';
   document.getElementById('fOut').value   = '';
   document.getElementById('fNotes').value = '';
+  document.getElementById('fAdpIn').value  = '';
+  document.getElementById('fAdpOut').value = '';
   document.getElementById('editOverlay').classList.add('open');
 }
 
@@ -1146,7 +1575,9 @@ function openEdit(id) {
   } else {
     document.getElementById('fOut').value = '';
   }
-  document.getElementById('fNotes').value = e.notes || '';
+  document.getElementById('fNotes').value  = e.notes  || '';
+  document.getElementById('fAdpIn').value  = e.adpIn  || '';
+  document.getElementById('fAdpOut').value = e.adpOut || '';
   document.getElementById('editOverlay').classList.add('open');
 }
 
@@ -1167,11 +1598,14 @@ function saveEntry() {
     if (new Date(outTime)<=new Date(inTime)) { toast('Out time must be after in time'); return; }
   }
 
+  const adpIn  = document.getElementById('fAdpIn').value  || null;
+  const adpOut = document.getElementById('fAdpOut').value || null;
+
   if (S.editId) {
     const i = S.entries.findIndex(x=>x.id===S.editId);
-    if (i>=0) S.entries[i] = {...S.entries[i], inTime, outTime, notes:nt, date:ds};
+    if (i>=0) S.entries[i] = {...S.entries[i], inTime, outTime, notes:nt, date:ds, adpIn, adpOut};
   } else {
-    S.entries.unshift({id:uid(), inTime, outTime, notes:nt, date:ds, inLoc:null, outLoc:null});
+    S.entries.unshift({id:uid(), inTime, outTime, notes:nt, date:ds, inLoc:null, outLoc:null, adpIn, adpOut});
   }
   S.entries.sort((a,b)=>new Date(b.inTime)-new Date(a.inTime));
   persist(); renderHist(); refreshDash(); closeEdit();
@@ -1188,6 +1622,35 @@ function delEntry(id) {
 function closeEdit() {
   document.getElementById('editOverlay').classList.remove('open');
   S.editId = null;
+}
+
+// ── Log Past Event ─────────────────────────────────
+function openLogEvent() {
+  const now = new Date();
+  document.getElementById('leDate').value = dateKey(now.toISOString());
+  document.getElementById('leTime').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('leNote').value = '';
+  document.getElementById('leType').value = 'arrive_work';
+  document.getElementById('logEvtOverlay').classList.add('open');
+}
+function closeLogEvent() {
+  document.getElementById('logEvtOverlay').classList.remove('open');
+}
+function saveLogEvent() {
+  const type = document.getElementById('leType').value;
+  const ds   = document.getElementById('leDate').value;
+  const ts   = document.getElementById('leTime').value;
+  const note = document.getElementById('leNote').value.trim();
+  if (!ds || !ts) { toast('Date and time required'); return; }
+  const [yr, mo, dy] = ds.split('-').map(Number);
+  const [hh, mm]     = ts.split(':').map(Number);
+  const time = new Date(yr, mo-1, dy, hh, mm).toISOString();
+  S.events.unshift({ id:uid(), time, type, loc:null, note, date:ds });
+  S.events.sort((a,b) => new Date(b.time) - new Date(a.time));
+  persistEvts();
+  closeLogEvent();
+  if (document.getElementById('tab-history').classList.contains('active')) renderHist();
+  toast('✅ Event logged');
 }
 
 // ══════════════════════════════════════════════════
@@ -1691,6 +2154,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('clockDate').textContent = fmtDate(new Date());
   refreshDash();
   renderHist();
+  syncSettingsUI();
   setTimeout(() => {
     initMaps(); startGeo(); updateMapMarkers(); refreshMapInfo();
     setupDefaults();
