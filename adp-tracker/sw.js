@@ -1,4 +1,4 @@
-const CACHE = 'timeguard-v1';
+const CACHE = 'timeguard-v2';
 const SHELL = [
   './',
   './index.html',
